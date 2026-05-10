@@ -8,13 +8,7 @@ import { emitOpenCode } from '../src/generator/emit/opencode.ts';
 import { aliasToolList } from '../src/generator/aliases/toolNames.ts';
 import { parseFrontmatter } from '../src/generator/frontmatter.ts';
 
-const PLUGIN_DIR_TOKEN = '${OPENCODE_PLUGIN_DIR}';
 const SKILL_HOME_TOKEN = '__SKILL_HOME__';
-
-/** Reverse the emit-time `__SKILL_HOME__` → `${OPENCODE_PLUGIN_DIR}` substitution. */
-function unsubSkillHome(text: string): string {
-  return text.split(PLUGIN_DIR_TOKEN).join(SKILL_HOME_TOKEN);
-}
 
 function walkFiles(dir: string): string[] {
   const out: string[] = [];
@@ -63,10 +57,9 @@ describe('emitOpenCode — skills round-trip', () => {
       expect(fields['description']).toBe(def.description);
       // OpenCode skill frontmatter is name + description only — no `tools` line.
       expect(fields['tools'] ?? null).toBe(null);
-      expect(unsubSkillHome(body)).toBe(readFileSync(bodyPath, 'utf8'));
+      expect(body).toBe(readFileSync(bodyPath, 'utf8'));
       for (const [rel, abs] of extras.files) {
-        const emitted = readFileSync(join(out, 'skills', def.name, rel), 'utf8');
-        expect(unsubSkillHome(emitted)).toBe(readFileSync(abs, 'utf8'));
+        expect(readFileSync(join(out, 'skills', def.name, rel), 'utf8')).toBe(readFileSync(abs, 'utf8'));
       }
     }
     expect(missing).toEqual([]);
@@ -91,7 +84,7 @@ describe('emitOpenCode — agents round-trip', () => {
       expect(fields['mode']).toBe('subagent');
       expect(fields['model']).toBe(def.model);
       expect(fields['tools']).toBe(aliasToolList('opencode', def.tools).join(', '));
-      expect(unsubSkillHome(body)).toBe(readFileSync(promptPath, 'utf8'));
+      expect(body).toBe(readFileSync(promptPath, 'utf8'));
     }
     expect(missing).toEqual([]);
   });

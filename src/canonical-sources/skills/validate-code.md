@@ -74,7 +74,7 @@ the inputs:
 - reviewDir
 
 Each `review-code` subagent resolves its focus brief
-(`__SKILL_HOME__/skills/review-code/focuses/<focus>.md`), adopts the persona that brief
+(its co-located `focuses/<focus>.md`), adopts the persona that brief
 names, and writes the target file — it does not load a per-focus reviewer agent
 (no such agents exist; focuses are briefs dispatched against personas).
 

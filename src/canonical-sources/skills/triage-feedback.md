@@ -17,9 +17,9 @@ the leaf does not spawn anything).
 
 ## What this skill does
 
-1. `Read` `__SKILL_HOME__/agents/reviewer.md` to confirm the persona exists, then
-   `Dispatch` one subagent that adopts the `reviewer` persona and runs the
-   **triage process** (below) against `reviewFilePaths` / `artifactPath`.
+1. `Dispatch` one subagent that adopts the `reviewer` persona (it ships with the
+   toolkit — dispatch it by name) and runs the **triage process** (below)
+   against `reviewFilePaths` / `artifactPath`.
 2. Receive the cluster list the leaf produces (the **cluster-list output
    template** below) and return it to the calling lifecycle skill as
    conversational markdown. **Do not persist it** — it is consumed inline.

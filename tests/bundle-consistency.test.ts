@@ -59,6 +59,15 @@ describe('CC bundle — plugin-root references resolve within the bundle', () =>
     );
     expect(readdirSync(join(bundle, 'skills', 'review-code', 'focuses')).sort()).toEqual(['accuracy.md', 'architecture.md', 'dx.md']);
   });
+
+  it('each review skill ships every persona prompt it might adopt (personas/<name>.md)', () => {
+    const expected = readdirSync(join(bundle, 'agents'))
+      .filter((f) => f.endsWith('.md'))
+      .sort();
+    for (const skillName of ['review-doc', 'review-code']) {
+      expect(readdirSync(join(bundle, 'skills', skillName, 'personas')).sort()).toEqual(expected);
+    }
+  });
 });
 
 describe('CC bundle — manifests + scripts', () => {
@@ -66,8 +75,9 @@ describe('CC bundle — manifests + scripts', () => {
     const manifest = JSON.parse(readFileSync(join(bundle, '.claude-plugin', 'plugin.json'), 'utf8')) as Record<string, unknown>;
     expect(typeof manifest['name']).toBe('string');
     expect(typeof manifest['version']).toBe('string');
-    const hooksJson = JSON.parse(readFileSync(join(bundle, 'hooks', 'hooks.json'), 'utf8')) as Record<string, unknown>;
-    expect(Object.keys(hooksJson).length).toBeGreaterThan(0);
+    const hooksJson = JSON.parse(readFileSync(join(bundle, 'hooks', 'hooks.json'), 'utf8')) as { hooks?: Record<string, unknown> };
+    expect(typeof hooksJson.hooks).toBe('object');
+    expect(Object.keys(hooksJson.hooks!).length).toBeGreaterThan(0);
   });
 
   it('shipped scripts are executable', () => {

@@ -85,6 +85,16 @@ export async function loadCanonicalSources(): Promise<CanonicalSources> {
     agents.push({ agent, promptPath: resolve(canonRoot, 'agents', `${base}.md`) });
   }
 
+  // `review-doc` / `review-code` are leaf reviewers — they cannot dispatch, so
+  // they adopt a persona by *reading its prompt* and treating it as their system
+  // prompt. Ship every persona prompt co-located under each such skill as
+  // `personas/<name>.md` (a skill is "such a skill" iff it ships `focuses/`),
+  // so the skill body can `Read` it by a skill-relative path on any harness.
+  for (const loaded of skills) {
+    if (![...loaded.extras.files.keys()].some((k) => k.startsWith('focuses/'))) continue;
+    for (const { agent, promptPath } of agents) loaded.extras.files.set(`personas/${agent.def.name}.md`, promptPath);
+  }
+
   const hookFiles = (await glob('hooks/*.ts', { cwd: canonRoot, absolute: true })).sort();
   const hooks: LoadedHook[] = [];
   for (const file of hookFiles) {

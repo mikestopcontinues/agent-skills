@@ -31,21 +31,32 @@ describe('loadCanonicalSources', () => {
   it('discovers extra files for skills that ship them', async () => {
     const sources = await loadCanonicalSources();
     const byName = new Map(sources.skills.map((s) => [s.skill.def.name, s]));
-    expect([...byName.get('review-doc')!.extras.files.keys()].sort()).toEqual([
-      'focuses/accuracy.md',
-      'focuses/architecture.md',
-      'focuses/clarity.md',
-      'focuses/comprehensiveness.md',
-      'focuses/depth.md',
-      'focuses/dx.md',
-      'focuses/integration.md',
-      'focuses/scope.md',
-    ]);
-    expect([...byName.get('review-code')!.extras.files.keys()].sort()).toEqual([
-      'focuses/accuracy.md',
-      'focuses/architecture.md',
-      'focuses/dx.md',
-    ]);
+    // Every persona prompt is co-located under each review skill (so the leaf
+    // reviewer can `Read personas/<name>.md`), alongside that skill's focus briefs.
+    const personaExtras = sources.agents.map((a) => `personas/${a.agent.def.name}.md`).sort();
+    expect([...byName.get('review-doc')!.extras.files.keys()].sort()).toEqual(
+      [
+        'focuses/accuracy.md',
+        'focuses/architecture.md',
+        'focuses/clarity.md',
+        'focuses/comprehensiveness.md',
+        'focuses/depth.md',
+        'focuses/dx.md',
+        'focuses/integration.md',
+        'focuses/scope.md',
+        ...personaExtras,
+      ].sort(),
+    );
+    expect([...byName.get('review-code')!.extras.files.keys()].sort()).toEqual(
+      ['focuses/accuracy.md', 'focuses/architecture.md', 'focuses/dx.md', ...personaExtras].sort(),
+    );
+    // Each persona extra resolves to that agent's canonical prompt sidecar.
+    const agentPromptByName = new Map(sources.agents.map((a) => [a.agent.def.name, a.promptPath]));
+    const badPersonaTargets = [...byName.get('review-doc')!.extras.files]
+      .filter(([rel]) => rel.startsWith('personas/'))
+      .filter(([rel, abs]) => abs !== agentPromptByName.get(rel.slice('personas/'.length, -'.md'.length)))
+      .map(([rel]) => rel);
+    expect(badPersonaTargets).toEqual([]);
     expect([...byName.get('create-spike')!.extras.files.keys()]).toEqual(['chapter.md']);
     expect(byName.get('write-doc')!.extras.files.size).toBe(0);
   });

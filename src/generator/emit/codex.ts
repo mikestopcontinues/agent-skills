@@ -4,21 +4,15 @@ import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
 import type { CanonicalSources } from '../loadCanonicalSources.ts';
 
-/** Token in canonical bodies for "the directory the toolkit's files live in".
- *  Codex plugins resolve files relative to the plugin root; `${CODEX_PLUGIN_ROOT}`
- *  is the v0.1 substitution — exact value pending Ch10 eval validation. */
-const SKILL_HOME_TOKEN = '__SKILL_HOME__';
-const CODEX_SKILL_HOME = '${CODEX_PLUGIN_ROOT}';
+/** Codex expands `${CODEX_PLUGIN_ROOT}` inside hook command strings (exact value
+ *  pending Ch10 eval validation). Skill/agent bodies are emitted verbatim and
+ *  reference bundled files by skill-relative path. */
+const CODEX_PLUGIN_ROOT = '${CODEX_PLUGIN_ROOT}';
 
 interface PluginMeta {
   name: string;
   version: string;
   description: string;
-}
-
-/** Substitute the toolkit-home placeholder for the Codex plugin layout. */
-function subSkillHome(text: string): string {
-  return text.split(SKILL_HOME_TOKEN).join(CODEX_SKILL_HOME);
 }
 
 function write(path: string, contents: string): void {
@@ -60,15 +54,15 @@ function tomlStringArray(values: readonly string[]): string {
  *
  *   <outDir>/
  *     .codex-plugin/plugin.json
- *     skills/<name>/SKILL.md            (+ extras: focuses/, chapter.md, …)
+ *     skills/<name>/SKILL.md            (+ extras: focuses/, personas/, chapter.md, …)
  *     agents/<role>.toml
- *     hooks.json
+ *     hooks.json                        ({ hooks: { <Event>: [ { matcher, hooks } ] } })
  *     hooks/<name>.sh
  *     scripts/<name>                    (yolo, doc-check-links.sh)
  *     docs/AGENTS.md                    (project context, if present)
  *
- * `__SKILL_HOME__` in skill/agent bodies is substituted to `${CODEX_PLUGIN_ROOT}`.
- * Per d12: zero `notify` entries — `notify` is not a hook fallback.
+ * Per d12: zero `notify` entries — `notify` is not a hook fallback. The
+ * `hooks.json` shape mirrors the Claude Code emit pending a vendored Codex schema.
  */
 export function emitCodex(sources: CanonicalSources, outDir: string, meta: PluginMeta): void {
   rmSync(outDir, { recursive: true, force: true });
@@ -84,20 +78,16 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
   for (const { skill, bodyPath, extras } of sources.skills) {
     const def = skill.def;
     const fields: FrontmatterFields = { name: def.name, description: def.description };
-    const body = subSkillHome(readFileSync(bodyPath, 'utf8'));
-    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, body));
-    for (const [rel, abs] of extras.files) {
-      write(join(outDir, 'skills', def.name, rel), subSkillHome(readFileSync(abs, 'utf8')));
-    }
+    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, readFileSync(bodyPath, 'utf8')));
+    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), readFileSync(abs, 'utf8'));
   }
 
   // Agents (personas) — one TOML file per role.
   for (const { agent, promptPath } of sources.agents) {
     const def = agent.def;
-    const prompt = subSkillHome(readFileSync(promptPath, 'utf8'));
     const lines = [
       `description = ${tomlBasicString(def.description)}`,
-      `developer_instructions = ${tomlMultilineString(prompt)}`,
+      `developer_instructions = ${tomlMultilineString(readFileSync(promptPath, 'utf8'))}`,
       `model = ${tomlBasicString(def.model ?? 'opus')}`,
       `tools = ${tomlStringArray(aliasToolList('codex', def.tools))}`,
     ];
@@ -105,7 +95,7 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
   }
 
   // Hooks — bash handler scripts + a hooks.json grouping them by (event, matcher),
-  // same structure as the Claude Code emit. Zero `notify` entries (d12).
+  // same double-nested shape as the Claude Code emit. Zero `notify` entries (d12).
   type HookEntry = { type: 'command'; command: string };
   type MatcherBlock = { matcher: string; hooks: HookEntry[] };
   const byEvent = new Map<string, Map<string, HookEntry[]>>();
@@ -115,13 +105,13 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
     if (!byEvent.has(def.event)) byEvent.set(def.event, new Map());
     const byMatcher = byEvent.get(def.event)!;
     if (!byMatcher.has(def.matcher)) byMatcher.set(def.matcher, []);
-    byMatcher.get(def.matcher)!.push({ type: 'command', command: `${CODEX_SKILL_HOME}/hooks/${def.name}.sh` });
+    byMatcher.get(def.matcher)!.push({ type: 'command', command: `${CODEX_PLUGIN_ROOT}/hooks/${def.name}.sh` });
   }
-  const hooksJson: Record<string, MatcherBlock[]> = {};
+  const events: Record<string, MatcherBlock[]> = {};
   for (const [event, byMatcher] of byEvent) {
-    hooksJson[event] = [...byMatcher].map(([matcher, hooks]) => ({ matcher, hooks }));
+    events[event] = [...byMatcher].map(([matcher, hooks]) => ({ matcher, hooks }));
   }
-  write(join(outDir, 'hooks.json'), JSON.stringify(hooksJson, null, 2) + '\n');
+  write(join(outDir, 'hooks.json'), JSON.stringify({ hooks: events }, null, 2) + '\n');
 
   // Shipped scripts.
   for (const [name, abs] of sources.scripts) copyExecutable(abs, join(outDir, 'scripts', name));

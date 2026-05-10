@@ -4,20 +4,17 @@ import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
 import type { CanonicalSources } from '../loadCanonicalSources.ts';
 
-/** Token in canonical bodies for "the directory the toolkit's files live in".
- *  Claude Code substitutes `${CLAUDE_PLUGIN_ROOT}` in plugin-shipped content. */
-const SKILL_HOME_TOKEN = '__SKILL_HOME__';
-const CC_SKILL_HOME = '${CLAUDE_PLUGIN_ROOT}';
+/** Claude Code expands `${CLAUDE_PLUGIN_ROOT}` inside `hooks/hooks.json` command
+ *  strings (and `.mcp.json`, `monitors.json`) — but NOT inside skill/agent body
+ *  text. Skill bodies therefore reference bundled files by skill-relative paths
+ *  (`focuses/<f>.md`, `personas/<p>.md`), which resolve from the skill's own
+ *  directory. The only use of this token in the bundle is the hook commands. */
+const CC_PLUGIN_ROOT = '${CLAUDE_PLUGIN_ROOT}';
 
 interface PluginMeta {
   name: string;
   version: string;
   description: string;
-}
-
-/** Substitute the toolkit-home placeholder for the Claude Code plugin layout. */
-function subSkillHome(text: string): string {
-  return text.split(SKILL_HOME_TOKEN).join(CC_SKILL_HOME);
 }
 
 function write(path: string, contents: string): void {
@@ -36,13 +33,14 @@ function copyExecutable(from: string, to: string): void {
  *   <outDir>/
  *     .claude-plugin/plugin.json
  *     agents/<name>.md
- *     skills/<name>/SKILL.md            (+ extras: focuses/, chapter.md, …)
- *     hooks/hooks.json
+ *     skills/<name>/SKILL.md            (+ extras: focuses/, personas/, chapter.md, …)
+ *     hooks/hooks.json                  ({ hooks: { <Event>: [ { matcher, hooks } ] } })
  *     hooks/<name>.sh
  *     scripts/<name>                    (yolo, doc-check-links.sh)
+ *     docs/CLAUDE.md                    (project context, if present)
  *
- * `__SKILL_HOME__` in skill/agent bodies is substituted to
- * `${CLAUDE_PLUGIN_ROOT}` (Claude Code expands that in plugin-shipped content).
+ * Skill/agent bodies are emitted verbatim; bundled files they reference are
+ * resolved by skill-relative path at runtime, not by token substitution.
  */
 export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: PluginMeta): void {
   rmSync(outDir, { recursive: true, force: true });
@@ -59,12 +57,8 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
     const def = skill.def;
     const fields: FrontmatterFields = { name: def.name, description: def.description };
     if (def.tools !== undefined) fields['tools'] = aliasToolList('claude-code', def.tools).join(', ');
-    const body = subSkillHome(readFileSync(bodyPath, 'utf8'));
-    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, body));
-    for (const [rel, abs] of extras.files) {
-      const text = subSkillHome(readFileSync(abs, 'utf8'));
-      write(join(outDir, 'skills', def.name, rel), text);
-    }
+    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, readFileSync(bodyPath, 'utf8')));
+    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), readFileSync(abs, 'utf8'));
   }
 
   // Agents (personas).
@@ -73,11 +67,12 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
     const fields: FrontmatterFields = { name: def.name, description: def.description };
     if (def.model !== undefined) fields['model'] = def.model;
     fields['tools'] = aliasToolList('claude-code', def.tools).join(', ');
-    const prompt = subSkillHome(readFileSync(promptPath, 'utf8'));
-    write(join(outDir, 'agents', `${def.name}.md`), composeArtifact(fields, prompt));
+    write(join(outDir, 'agents', `${def.name}.md`), composeArtifact(fields, readFileSync(promptPath, 'utf8')));
   }
 
   // Hooks — bash handler scripts + a hooks.json grouping them by (event, matcher).
+  // Plugin hooks.json is the same double-nested shape as settings.json:
+  //   { "hooks": { "<Event>": [ { "matcher": "...", "hooks": [ {type,command} ] } ] } }
   type HookEntry = { type: 'command'; command: string };
   type MatcherBlock = { matcher: string; hooks: HookEntry[] };
   const byEvent = new Map<string, Map<string, HookEntry[]>>();
@@ -87,13 +82,13 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
     if (!byEvent.has(def.event)) byEvent.set(def.event, new Map());
     const byMatcher = byEvent.get(def.event)!;
     if (!byMatcher.has(def.matcher)) byMatcher.set(def.matcher, []);
-    byMatcher.get(def.matcher)!.push({ type: 'command', command: `${CC_SKILL_HOME}/hooks/${def.name}.sh` });
+    byMatcher.get(def.matcher)!.push({ type: 'command', command: `${CC_PLUGIN_ROOT}/hooks/${def.name}.sh` });
   }
-  const hooksJson: Record<string, MatcherBlock[]> = {};
+  const events: Record<string, MatcherBlock[]> = {};
   for (const [event, byMatcher] of byEvent) {
-    hooksJson[event] = [...byMatcher].map(([matcher, hooks]) => ({ matcher, hooks }));
+    events[event] = [...byMatcher].map(([matcher, hooks]) => ({ matcher, hooks }));
   }
-  write(join(outDir, 'hooks', 'hooks.json'), JSON.stringify(hooksJson, null, 2) + '\n');
+  write(join(outDir, 'hooks', 'hooks.json'), JSON.stringify({ hooks: events }, null, 2) + '\n');
 
   // Shipped scripts.
   for (const [name, abs] of sources.scripts) copyExecutable(abs, join(outDir, 'scripts', name));

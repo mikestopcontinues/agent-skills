@@ -9,11 +9,6 @@ import { parseFrontmatter } from '../src/generator/frontmatter.ts';
 const PLUGIN_ROOT_TOKEN = '${CODEX_PLUGIN_ROOT}';
 const SKILL_HOME_TOKEN = '__SKILL_HOME__';
 
-/** Reverse the emit-time `__SKILL_HOME__` → `${CODEX_PLUGIN_ROOT}` substitution. */
-function unsubSkillHome(text: string): string {
-  return text.split(PLUGIN_ROOT_TOKEN).join(SKILL_HOME_TOKEN);
-}
-
 /** Reverse TOML basic-string escaping (`\\`, `\"`, `\n`, `\t`) — the emitter only
  *  produces those four escapes in `developer_instructions`. */
 function unescapeTomlBasic(text: string): string {
@@ -65,10 +60,9 @@ describe('emitCodex — skills round-trip', () => {
       expect(fields['description']).toBe(def.description);
       // Codex skill frontmatter is name + description only — no `tools` line.
       expect(fields['tools'] ?? null).toBe(null);
-      expect(unsubSkillHome(body)).toBe(readFileSync(bodyPath, 'utf8'));
+      expect(body).toBe(readFileSync(bodyPath, 'utf8'));
       for (const [rel, abs] of extras.files) {
-        const emitted = readFileSync(join(out, 'skills', def.name, rel), 'utf8');
-        expect(unsubSkillHome(emitted)).toBe(readFileSync(abs, 'utf8'));
+        expect(readFileSync(join(out, 'skills', def.name, rel), 'utf8')).toBe(readFileSync(abs, 'utf8'));
       }
     }
     expect(missing).toEqual([]);
@@ -99,7 +93,7 @@ describe('emitCodex — agents round-trip', () => {
       const start = toml.indexOf('"""\n') + 4;
       const end = toml.indexOf('"""\n', start);
       const prompt = unescapeTomlBasic(toml.slice(start, end));
-      expect(unsubSkillHome(prompt)).toBe(readFileSync(promptPath, 'utf8'));
+      expect(prompt).toBe(readFileSync(promptPath, 'utf8'));
     }
     expect(missing).toEqual([]);
   });
@@ -117,15 +111,15 @@ describe('emitCodex — hooks', () => {
     }
   });
 
-  it('hooks.json references every hook with a plugin-root path, grouped by (event, matcher)', () => {
-    const hooksJson = JSON.parse(readFileSync(join(out, 'hooks.json'), 'utf8')) as Record<
-      string,
-      Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>
-    >;
+  it('hooks.json uses the { hooks: { <Event>: [ { matcher, hooks } ] } } shape, referencing every hook', () => {
+    const parsed = JSON.parse(readFileSync(join(out, 'hooks.json'), 'utf8')) as {
+      hooks: Record<string, Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>>;
+    };
+    expect(typeof parsed.hooks).toBe('object');
     const referenced = new Set<string>();
     const badType: string[] = [];
     const badPrefix: string[] = [];
-    for (const blocks of Object.values(hooksJson)) {
+    for (const blocks of Object.values(parsed.hooks)) {
       for (const block of blocks) {
         for (const entry of block.hooks) {
           if (entry.type !== 'command') badType.push(entry.command);

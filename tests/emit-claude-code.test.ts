@@ -8,12 +8,6 @@ import { emitClaudeCode } from '../src/generator/emit/claudeCode.ts';
 import { parseFrontmatter } from '../src/generator/frontmatter.ts';
 
 const PLUGIN_ROOT_TOKEN = '${CLAUDE_PLUGIN_ROOT}';
-const SKILL_HOME_TOKEN = '__SKILL_HOME__';
-
-/** Reverse the emit-time `__SKILL_HOME__` → `${CLAUDE_PLUGIN_ROOT}` substitution. */
-function unsubSkillHome(text: string): string {
-  return text.split(PLUGIN_ROOT_TOKEN).join(SKILL_HOME_TOKEN);
-}
 
 let sources: CanonicalSources;
 let out: string;
@@ -42,12 +36,20 @@ describe('emitClaudeCode — skills round-trip', () => {
       expect(fields['description']).toBe(def.description);
       // claude-code tool aliasing is identity; absent canonical tools → no `tools:` line.
       expect(fields['tools'] ?? null).toBe(def.tools ? def.tools.join(', ') : null);
-      // Body round-trips byte-exact once the toolkit-home substitution is reversed.
-      expect(unsubSkillHome(body)).toBe(readFileSync(bodyPath, 'utf8'));
-      // Extra shipped files round-trip byte-exact (after the same reverse-sub).
+      // Body and extras are emitted verbatim.
+      expect(body).toBe(readFileSync(bodyPath, 'utf8'));
       for (const [rel, abs] of extras.files) {
-        const emitted = readFileSync(join(out, 'skills', def.name, rel), 'utf8');
-        expect(unsubSkillHome(emitted)).toBe(readFileSync(abs, 'utf8'));
+        expect(readFileSync(join(out, 'skills', def.name, rel), 'utf8')).toBe(readFileSync(abs, 'utf8'));
+      }
+    }
+  });
+
+  it('ships review-doc/review-code with co-located persona prompts (every persona)', () => {
+    for (const skillName of ['review-doc', 'review-code']) {
+      for (const { agent, promptPath } of sources.agents) {
+        const file = join(out, 'skills', skillName, 'personas', `${agent.def.name}.md`);
+        expect(existsSync(file)).toBe(true);
+        expect(readFileSync(file, 'utf8')).toBe(readFileSync(promptPath, 'utf8'));
       }
     }
   });
@@ -64,7 +66,7 @@ describe('emitClaudeCode — agents round-trip', () => {
       expect(fields['description']).toBe(def.description);
       expect(fields['model']).toBe(def.model);
       expect(fields['tools']).toBe(def.tools.join(', '));
-      expect(unsubSkillHome(body)).toBe(readFileSync(promptPath, 'utf8'));
+      expect(body).toBe(readFileSync(promptPath, 'utf8'));
     }
   });
 });
@@ -77,22 +79,27 @@ describe('emitClaudeCode — hooks', () => {
     }
   });
 
-  it('hooks.json references every hook with a plugin-root path, grouped by (event, matcher)', () => {
-    const hooksJson = JSON.parse(readFileSync(join(out, 'hooks', 'hooks.json'), 'utf8')) as Record<
-      string,
-      Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>
-    >;
+  it('hooks.json uses the { hooks: { <Event>: [ { matcher, hooks } ] } } shape, referencing every hook', () => {
+    const parsed = JSON.parse(readFileSync(join(out, 'hooks', 'hooks.json'), 'utf8')) as {
+      hooks: Record<string, Array<{ matcher: string; hooks: Array<{ type: string; command: string }> }>>;
+    };
+    expect(typeof parsed.hooks).toBe('object');
     const referenced = new Set<string>();
-    for (const blocks of Object.values(hooksJson)) {
+    const badType: string[] = [];
+    const badPrefix: string[] = [];
+    for (const blocks of Object.values(parsed.hooks)) {
       for (const block of blocks) {
         for (const entry of block.hooks) {
-          expect(entry.type).toBe('command');
-          expect(entry.command.startsWith(`${PLUGIN_ROOT_TOKEN}/hooks/`)).toBe(true);
-          expect(entry.command.endsWith('.sh')).toBe(true);
+          if (entry.type !== 'command') badType.push(entry.command);
+          if (!entry.command.startsWith(`${PLUGIN_ROOT_TOKEN}/hooks/`) || !entry.command.endsWith('.sh')) {
+            badPrefix.push(entry.command);
+          }
           referenced.add(entry.command.replace(`${PLUGIN_ROOT_TOKEN}/hooks/`, '').replace(/\.sh$/, ''));
         }
       }
     }
+    expect(badType).toEqual([]);
+    expect(badPrefix).toEqual([]);
     expect([...referenced].sort()).toEqual(sources.hooks.map((h) => h.hook.def.name).sort());
   });
 });
@@ -111,22 +118,5 @@ describe('emitClaudeCode — project context', () => {
     const file = join(out, 'docs', pc.def.harnessFilenames.claudeCode);
     expect(existsSync(file)).toBe(true);
     expect(readFileSync(file, 'utf8')).toBe(pc.def.content);
-  });
-});
-
-// The repo-checked-in build (`pnpm build`) lives under dist/ (gitignored) — not
-// asserted here; this suite emits to a temp dir so it's hermetic.
-describe('emitClaudeCode — no leftover placeholder', () => {
-  it('no emitted file still contains the raw __SKILL_HOME__ token', () => {
-    const offenders: string[] = [];
-    for (const { skill } of sources.skills) {
-      const file = join(out, 'skills', skill.def.name, 'SKILL.md');
-      if (readFileSync(file, 'utf8').includes(SKILL_HOME_TOKEN)) offenders.push(file);
-    }
-    for (const { agent } of sources.agents) {
-      const file = join(out, 'agents', `${agent.def.name}.md`);
-      if (readFileSync(file, 'utf8').includes(SKILL_HOME_TOKEN)) offenders.push(file);
-    }
-    expect(offenders).toEqual([]);
   });
 });
