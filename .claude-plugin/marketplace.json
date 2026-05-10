@@ -1,0 +1,17 @@
+{
+  "name": "agent-skills",
+  "owner": {
+    "name": "mikestopcontinues"
+  },
+  "metadata": {
+    "description": "Local development marketplace for the agent-skills toolkit. The plugin source points at the built Claude Code bundle under dist/ — run `pnpm build` before adding/updating this marketplace."
+  },
+  "plugins": [
+    {
+      "name": "agent-skills",
+      "source": "./dist/bundles/claude-code",
+      "description": "Harness-neutral autonomous-project toolkit: lifecycle skills, persona agents, and governance hooks (Claude Code bundle).",
+      "version": "0.1.0"
+    }
+  ]
+}
