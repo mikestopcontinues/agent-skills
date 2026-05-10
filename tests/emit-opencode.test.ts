@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
@@ -142,5 +143,17 @@ describe('emitOpenCode — no leftover placeholder', () => {
       if (readFileSync(file, 'utf8').includes(SKILL_HOME_TOKEN)) offenders.push(rel);
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('emitOpenCode — generated TS plugin', () => {
+  // T2B.20: the generated src/plugin.ts must be valid TypeScript. `node --check`
+  // type-strips then syntax-checks, which also confirms it is erasable-syntax-
+  // only (the repo's tsconfig setting) — i.e. it runs unmodified under Node.
+  it('src/plugin.ts passes `node --check` (syntactically valid, type-strippable)', () => {
+    const plugin = join(out, 'src', 'plugin.ts');
+    expect(existsSync(plugin)).toBe(true);
+    // Throws on a syntax / non-erasable-syntax error.
+    execFileSync(process.execPath, ['--check', plugin], { stdio: ['pipe', 'pipe', 'pipe'] });
   });
 });
