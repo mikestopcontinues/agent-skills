@@ -50,7 +50,7 @@ Reader-first communication — structural coherence, information architecture, c
 - Self-verify links mid-work — the `pre-bash-doc` hook runs
   `doc-check-links.sh` at commit time, but don't push broken refs to the
   gate. Spot-check before handing back, especially after structural moves.
-- Scaffold new docs through `.claude/scripts/yolo new` — never hand-write
+- Scaffold new docs through `yolo new` — never hand-write
   a new `spikes/`/`plans/`/`notes/` file; the `pre-write-doc` hook will
   block it.
 - Structure for numbered review — use numbered sections, numbered lists,

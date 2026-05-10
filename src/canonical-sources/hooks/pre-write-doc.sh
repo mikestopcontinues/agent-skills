@@ -21,7 +21,7 @@ deny() {
 }
 
 case "$file_path" in
-  */docs/spikes/*/README.md) deny 'Use ".claude/scripts/yolo new spike <project> <name>" to scaffold spike files.' ;;
-  */docs/plans/*/README.md)  deny 'Use ".claude/scripts/yolo new plan <project> <name>" to scaffold plan files.' ;;
-  */docs/notes/*.md)         deny 'Use ".claude/scripts/yolo new note <project|--global> <name>" to scaffold note files.' ;;
+  */docs/spikes/*/README.md) deny 'Use "yolo new spike <project> <name>" to scaffold spike files.' ;;
+  */docs/plans/*/README.md)  deny 'Use "yolo new plan <project> <name>" to scaffold plan files.' ;;
+  */docs/notes/*.md)         deny 'Use "yolo new note <project|--global> <name>" to scaffold note files.' ;;
 esac

@@ -20,13 +20,13 @@ The caller (typically `validate-doc`, or any orchestrator) provides:
 
 Execute in order.
 
-1. **Resolve the focus brief.** `Read` `.claude/skills/review-doc/focuses/{focus}.md`.
+1. **Resolve the focus brief.** `Read` `__SKILL_HOME__/skills/review-doc/focuses/{focus}.md`.
    The brief names the persona to dispatch and supplies the focus-specific
    mandate: signals to flag, the verification recipe, what NOT to flag, worked
    examples, and focus-specific severity calibration. (If no brief exists for a
    contextual focus, it must be authored first — abort and report rather than
    improvise one.)
-2. **Adopt the persona.** `Read` `.claude/agents/{persona}.md` — the persona is
+2. **Adopt the persona.** `Read` `__SKILL_HOME__/agents/{persona}.md` — the persona is
    whatever the brief's `**Persona**:` line names (the brief is authoritative;
    for the baselines it's `architect` for `architecture`, `qa` for `accuracy`,
    `doc-writer` for `clarity`, `reviewer` for `comprehensiveness`/`scope`,

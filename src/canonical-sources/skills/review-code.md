@@ -37,12 +37,12 @@ Execute in order.
      sections are `(none)`; return its path — do not invent findings.
    - Persist the diff text to a temp path (`Bash`: `mktemp` under `/tmp`) so you
      can re-read it as needed.
-2. **Resolve the focus brief.** `Read` `.claude/skills/review-code/focuses/{focus}.md`.
+2. **Resolve the focus brief.** `Read` `__SKILL_HOME__/skills/review-code/focuses/{focus}.md`.
    The brief names the persona to dispatch and supplies the focus-specific
    mandate: signals to flag, the verification recipe, what NOT to flag, worked
    examples, and focus-specific severity calibration — all tuned for reviewing a
    diff.
-3. **Adopt the persona.** `Read` `.claude/agents/{persona}.md` — the persona is
+3. **Adopt the persona.** `Read` `__SKILL_HOME__/agents/{persona}.md` — the persona is
    whatever the brief's `**Persona**:` line names (the brief is authoritative;
    for the baselines it's `architect` for `architecture`, `qa` for `accuracy`,
    `dx` for `dx` — a contextual brief names its own). Treat that agent body as

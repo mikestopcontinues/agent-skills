@@ -69,19 +69,12 @@ In order of precedence:
   - Set project context: path, name, status (from README frontmatter when
     present), open spike/plan inventory
 - **Resolved to a new project** (name supplied, directory does not exist):
-  - **Preferred path** (once `yolo` CLI lands in Phase 1.C): invoke
-    `yolo new project <name>`; the CLI assigns the next free `xNNN-` and
-    seeds the canonical layout
-  - **Fallback path** (current state): scaffold manually via `Bash`:
-    - Compute next `xNNN-` by globbing existing `docs/x*/` and incrementing
-      the max
-    - `mkdir -p docs/xNNN-<name>/{decisions,notes}`
-    - Write a minimal `README.md` (title + `## One-liner` + `## Why` +
-      `## In Scope` + `## Out of Scope` + `## Success Criteria` headings,
-      blank bodies) with `status: active` frontmatter
-    - Write a minimal `tasks.md` (`# Tasks` + `## Spike` / `## Plan` /
-      `## Execution` headings, no rows yet)
-    - Leave `decisions/` and `notes/` empty
+  - Invoke `yolo new project <name>` — the CLI assigns the next free
+    `xNNN-` and seeds the canonical layout (`README.md` charter with
+    `status: active` frontmatter and `## One-liner` / `## Why` /
+    `## In Scope` / `## Out of Scope` / `## Success Criteria` headings;
+    `tasks.md` with `## Spike` / `## Plan` / `## Execution` headings;
+    empty `decisions/` and `notes/`)
   - After scaffold, load as if existing
 
 ### 3. Return metadata

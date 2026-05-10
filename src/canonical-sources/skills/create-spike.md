@@ -28,10 +28,10 @@ launch-project error verbatim — do not improvise a project context.
 Once project context is loaded, identify the spike's research question and
 proposed chapter list. If neither is in the captain's prompt, ask once before
 proceeding. Use `Bash` to scaffold via
-`.claude/scripts/yolo new spike <project> <name>` — never write the
+`yolo new spike <project> <name>` — never write the
 spike `README.md` path directly. Parse the JSON envelope's `filePath` to
 discover the assigned `sNN-<name>/README.md`. Per-chapter authoring uses
-`.claude/scripts/yolo new chapter <project> <spike-slug> <chapter-name>`,
+`yolo new chapter <project> <spike-slug> <chapter-name>`,
 which returns the assigned `NN-<chapter-name>.md` path the same way.
 
 ## Per-chapter loop

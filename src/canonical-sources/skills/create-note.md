@@ -57,13 +57,13 @@ note, pass the resolved project slug (e.g. `x000-yolo-project`); for a
 global note, pass `--global`:
 
 ```bash
-.claude/scripts/yolo new note <project|--global> <kebab-name>
+yolo new note <project|--global> <kebab-name>
 ```
 
 Parse the JSON envelope on stdout to learn the created path:
 
 ```bash
-result=$(.claude/scripts/yolo new note "$scope" "$name")
+result=$(yolo new note "$scope" "$name")
 file_path=$(printf '%s' "$result" | jq -r '.filePath')
 ```
 

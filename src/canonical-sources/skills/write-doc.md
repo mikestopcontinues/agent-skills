@@ -28,9 +28,9 @@ shapes MUST be created via the `yolo new` CLI:
 
 | New file shape | Scaffold |
 |----------------|----------|
-| `docs/spikes/sNNN-<name>/README.md` | `.claude/scripts/yolo new spike <project> <name>` |
-| `docs/plans/pNNN-<name>/README.md` | `.claude/scripts/yolo new plan <project> <name>` |
-| `docs/notes/<name>.md` (top-level note) | `.claude/scripts/yolo new note --global <name>` |
+| `docs/spikes/sNNN-<name>/README.md` | `yolo new spike <project> <name>` |
+| `docs/plans/pNNN-<name>/README.md` | `yolo new plan <project> <name>` |
+| `docs/notes/<name>.md` (top-level note) | `yolo new note --global <name>` |
 
 The CLI assigns the next free number, places the file at the canonical
 path, seeds frontmatter, and emits a JSON envelope whose `filePath` field
@@ -96,7 +96,7 @@ use repo-relative paths from `docs/`.
 
 ### 5. Validate
 
-- If cross-references changed, run `.claude/scripts/doc-check-links.sh`
+- If cross-references changed, run `doc-check-links.sh`
 - Re-read the edited file end-to-end before handing back
 
 ### 6. Brief the captain
@@ -113,9 +113,3 @@ State what was created or changed, the path, and any deferred follow-ups
 - **If the edit grows beyond a targeted change**, consider whether it
   warrants `/revise-doc` (review-driven), `/create-spike` (new research),
   or `/create-plan` (new spec) instead
-
-## DO NOT delete `edit-doc/`
-
-This skill replaces `edit-doc`, but the captain handles the deletion in the
-same commit when merging. Do not remove `.claude/skills/edit-doc/SKILL.md`
-from this skill's worktree.

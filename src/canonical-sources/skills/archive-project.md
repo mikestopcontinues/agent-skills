@@ -55,7 +55,7 @@ revert` of that commit.
 Run the link-checking pre-commit script:
 
 ```bash
-.claude/scripts/doc-check-links.sh
+doc-check-links.sh
 ```
 
 If the script exits non-zero, abort the whole archive operation and
@@ -72,7 +72,7 @@ Walk `<project>/decisions/d*.md`, oldest to newest. For each decision:
 2. Brief the captain with the summary. Ask: **promote to top-level
    `docs/decisions/`, or summarize-only into the condensed README?**
 3. If promote: invoke `/create-decision --global <name>` style flow
-   (or directly scaffold via `.claude/scripts/yolo new decision
+   (or directly scaffold via `yolo new decision
    --global <name>`). The promoted file gets the next-available
    top-level `dNN-` and **preserves the original-name slug**
    (e.g., `x000-yolo-project/decisions/d03-canonical-format.md` →
@@ -99,7 +99,7 @@ For each item:
 
 1. Brief the captain with the item's text and origin.
 2. Ask: **move to `docs/notes/<topic>.md`, or drop as no-longer-relevant?**
-3. If move: scaffold via `.claude/scripts/yolo new note --global
+3. If move: scaffold via `yolo new note --global
    <name>` and write the item's body. If multiple project notes belong
    together, ask the captain whether to consolidate into one
    `docs/notes/<topic>.md` or keep separate.

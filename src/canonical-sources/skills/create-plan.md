@@ -57,10 +57,10 @@ fully approved spike.
 ### 3. Scaffold the plan
 
 Invoke `/write-doc` to scaffold a new plan via the `pNN-<name>` convention.
-`/write-doc` delegates to `.claude/scripts/yolo new plan <project> <name>`
+`/write-doc` delegates to `yolo new plan <project> <name>`
 — never improvise the path or pick a number manually. The CLI's JSON
 envelope reports the assigned `filePath`; per-chapter authoring later
-uses `.claude/scripts/yolo new chapter <project> <plan-slug> <name>`.
+uses `yolo new chapter <project> <plan-slug> <name>`.
 
 Confirm the scaffold landed before authoring chapters.
 
@@ -191,7 +191,7 @@ Wait for captain approval before downstream work (`/execute-plan`) begins.
 
 ## Cross-cutting
 
-- New docs use `.claude/scripts/yolo new` (the pre-write-doc hook enforces
+- New docs use `yolo new` (the pre-write-doc hook enforces
   this); delegate via `/write-doc`, never write paths directly.
 - Cross-references between docs use relative paths without anchors (per d06).
 - Locked decisions land under the project's `decisions/` directory via
