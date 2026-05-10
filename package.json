@@ -21,7 +21,8 @@
     "type:watch": "tsc --noEmit --watch",
     "lint": "eslint . --fix",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync-baseline": "node scripts/sync-baseline.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
