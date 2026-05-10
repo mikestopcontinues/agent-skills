@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { glob } from 'glob';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Skill } from '../src/factories/defineSkill.ts';
@@ -54,5 +55,20 @@ describe('canonical sources', () => {
       expect(names.has(skill.def.name), `duplicate skill name: ${skill.def.name}`).toBe(false);
       names.add(skill.def.name);
     }
+  });
+
+  it('every canonical artifact has a co-located, non-empty .eval.md sidecar', async () => {
+    const tsFiles = [
+      ...(await glob('src/canonical-sources/skills/*.ts', { cwd: repoRoot, absolute: true })),
+      ...(await glob('src/canonical-sources/agents/*.ts', { cwd: repoRoot, absolute: true })),
+      ...(await glob('src/canonical-sources/hooks/*.ts', { cwd: repoRoot, absolute: true })),
+      resolve(repoRoot, 'src/canonical-sources/project-context.ts'),
+    ];
+    const missing: string[] = [];
+    for (const tsFile of tsFiles) {
+      const evalFile = tsFile.replace(/\.ts$/, '.eval.md');
+      if (!existsSync(evalFile) || readFileSync(evalFile, 'utf8').trim().length === 0) missing.push(evalFile);
+    }
+    expect(missing).toEqual([]);
   });
 });

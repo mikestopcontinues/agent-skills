@@ -69,7 +69,8 @@ export async function loadCanonicalSources(): Promise<CanonicalSources> {
     if (skill.def.name !== base) throw new Error(`${file}: skill name '${skill.def.name}' != filename`);
     const bodyPath = resolve(canonRoot, 'skills', `${base}.md`);
     const extrasRoot = resolve(canonRoot, 'skills', `${base}.extras`);
-    const extraFiles = await glob('**/*', { cwd: extrasRoot, absolute: true, nodir: true });
+    // `.eval.md` sidecars under `<name>.extras/` are dev-only — never shipped.
+    const extraFiles = await glob('**/*', { cwd: extrasRoot, absolute: true, nodir: true, ignore: ['**/*.eval.md'] });
     const files = new Map<string, string>();
     for (const abs of extraFiles) files.set(abs.slice(extrasRoot.length + 1), abs);
     skills.push({ skill, bodyPath, extras: { files } });
@@ -100,7 +101,8 @@ export async function loadCanonicalSources(): Promise<CanonicalSources> {
     projectContext = await importDefault(projectContextFiles[0], 'projectContext', ProjectContext, 'ProjectContext');
   }
 
-  const scriptFiles = await glob('*', { cwd: resolve(repoRoot, 'src/scripts'), absolute: true, nodir: true });
+  // `.eval.md` sidecars in src/scripts/ are dev-only — never shipped.
+  const scriptFiles = await glob('*', { cwd: resolve(repoRoot, 'src/scripts'), absolute: true, nodir: true, ignore: ['*.eval.md'] });
   const scripts = new Map<string, string>();
   for (const abs of scriptFiles) scripts.set(abs.replace(/.*\//, ''), abs);
 
