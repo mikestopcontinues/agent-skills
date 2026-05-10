@@ -105,6 +105,15 @@ describe('emitClaudeCode — scripts', () => {
   });
 });
 
+describe('emitClaudeCode — project context', () => {
+  it('emits docs/CLAUDE.md with the canonical content', () => {
+    const pc = sources.projectContext!;
+    const file = join(out, 'docs', pc.def.harnessFilenames.claudeCode);
+    expect(existsSync(file)).toBe(true);
+    expect(readFileSync(file, 'utf8')).toBe(pc.def.content);
+  });
+});
+
 // The repo-checked-in build (`pnpm build`) lives under dist/ (gitignored) — not
 // asserted here; this suite emits to a temp dir so it's hermetic.
 describe('emitClaudeCode — no leftover placeholder', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { loadCanonicalSources } from '../src/generator/loadCanonicalSources.ts';
+import { ProjectContext } from '../src/factories/defineProjectContext.ts';
 import { aliasToolName, aliasToolList, deAliasToolName } from '../src/generator/aliases/toolNames.ts';
 
 describe('loadCanonicalSources', () => {
@@ -9,8 +10,13 @@ describe('loadCanonicalSources', () => {
     expect(sources.skills.length).toBe(21);
     expect(sources.agents.length).toBe(11);
     expect(sources.hooks.length).toBe(5);
-    // project-context is not transcribed yet (T2A.31 deferred).
-    expect(sources.projectContext).toBeUndefined();
+    expect(sources.projectContext).toBeInstanceOf(ProjectContext);
+    expect(sources.projectContext?.def.name).toBe('docs-root-context');
+    expect(sources.projectContext?.def.harnessFilenames).toEqual({
+      claudeCode: 'CLAUDE.md',
+      codex: 'AGENTS.md',
+      opencode: 'AGENTS.md',
+    });
     expect([...sources.scripts.keys()].sort()).toEqual(['doc-check-links.sh', 'yolo']);
   });
 
