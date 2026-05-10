@@ -16,6 +16,11 @@ describe('defineSkill', () => {
     expect(s.def.name).toBe('create-spike');
   });
 
+  it('accepts a skill with no tools restriction', () => {
+    const s = defineSkill({ name: 'write-doc', description: 'Author docs.', body: 'body' });
+    expect(s.def.tools).toBeUndefined();
+  });
+
   it('accepts optional metadata', () => {
     const s = defineSkill({
       name: 'review-doc',

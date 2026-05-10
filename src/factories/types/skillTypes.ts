@@ -24,8 +24,12 @@ export interface SkillDef {
   name: string;
   /** Prescriptive description — tells the model when to invoke the skill. */
   description: string;
-  /** Canonical tool names the skill body assumes are available. */
-  tools: ToolName[];
+  /**
+   * Canonical tool names the skill is restricted to. Omit to inherit the
+   * harness's full toolset (the generator emits no `tools:` frontmatter line).
+   * An empty array means "no tools" — distinct from omission.
+   */
+  tools?: ToolName[];
   /** The SKILL.md body — transcribed verbatim from the Phase 1 source. */
   body: string;
   metadata?: SkillMetadata;
@@ -46,7 +50,7 @@ export const SkillDefSchema = alignSchema<SkillDef>()(
   v.object({
     name: v.pipe(v.string(), v.regex(SKILL_NAME_REGEX)),
     description: v.pipe(v.string(), v.minLength(1)),
-    tools: v.array(ToolNameSchema),
+    tools: v.optional(v.array(ToolNameSchema)),
     body: v.pipe(v.string(), v.minLength(1)),
     metadata: v.optional(SkillMetadataSchema),
   }),

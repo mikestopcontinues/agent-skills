@@ -1,0 +1,6 @@
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "cd /Users/mike/Code/openspike && git commit -m \"msg\""
+  }
+}

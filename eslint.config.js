@@ -5,7 +5,7 @@ import vitest from '@vitest/eslint-plugin';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'tests/snapshots/**'],
+    ignores: ['dist/**', 'node_modules/**', 'tests/snapshots/**', 'src/scripts/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
