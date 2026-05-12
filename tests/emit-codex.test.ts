@@ -9,6 +9,11 @@ import { parseFrontmatter } from '../src/generator/frontmatter.ts';
 const PLUGIN_ROOT_TOKEN = '${CODEX_PLUGIN_ROOT}';
 const SKILL_HOME_TOKEN = '__SKILL_HOME__';
 
+/** Reverse the emit-time `__SKILL_HOME__` → `${CODEX_PLUGIN_ROOT}` substitution. */
+function unsubSkillHome(text: string): string {
+  return text.split(PLUGIN_ROOT_TOKEN).join(SKILL_HOME_TOKEN);
+}
+
 /** Reverse TOML basic-string escaping (`\\`, `\"`, `\n`, `\t`) — the emitter only
  *  produces those four escapes in `developer_instructions`. */
 function unescapeTomlBasic(text: string): string {
@@ -60,9 +65,9 @@ describe('emitCodex — skills round-trip', () => {
       expect(fields['description']).toBe(def.description);
       // Codex skill frontmatter is name + description only — no `tools` line.
       expect(fields['tools'] ?? null).toBe(null);
-      expect(body).toBe(readFileSync(bodyPath, 'utf8'));
+      expect(unsubSkillHome(body)).toBe(readFileSync(bodyPath, 'utf8'));
       for (const [rel, abs] of extras.files) {
-        expect(readFileSync(join(out, 'skills', def.name, rel), 'utf8')).toBe(readFileSync(abs, 'utf8'));
+        expect(unsubSkillHome(readFileSync(join(out, 'skills', def.name, rel), 'utf8'))).toBe(readFileSync(abs, 'utf8'));
       }
     }
     expect(missing).toEqual([]);
@@ -92,7 +97,7 @@ describe('emitCodex — agents round-trip', () => {
       // newline TOML strips, with basic-string escaping reversed.
       const start = toml.indexOf('"""\n') + 4;
       const end = toml.indexOf('"""\n', start);
-      const prompt = unescapeTomlBasic(toml.slice(start, end));
+      const prompt = unsubSkillHome(unescapeTomlBasic(toml.slice(start, end)));
       expect(prompt).toBe(readFileSync(promptPath, 'utf8'));
     }
     expect(missing).toEqual([]);

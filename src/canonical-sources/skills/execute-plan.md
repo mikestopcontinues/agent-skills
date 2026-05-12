@@ -223,6 +223,6 @@ When every phase has merged and `tasks.md` shows all rows checked:
 ## Cross-cutting
 
 - All new docs (e.g., notes captured during phase work) use
-  `yolo new` (the pre-write-doc hook enforces this).
+  `__SKILL_HOME__/scripts/yolo new` (the pre-write-doc hook enforces this).
 - Cross-references between docs use relative paths without anchors
   (per d06).

@@ -4,10 +4,16 @@ import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
 import type { CanonicalSources } from '../loadCanonicalSources.ts';
 
-/** Codex expands `${CODEX_PLUGIN_ROOT}` inside hook command strings (exact value
- *  pending Ch10 eval validation). Skill/agent bodies are emitted verbatim and
- *  reference bundled files by skill-relative path. */
+/** Canonical placeholder for "the toolkit's install directory". Codex expands
+ *  `${CODEX_PLUGIN_ROOT}` inside hook command strings and plugin-shipped content
+ *  (exact value pending Ch10 eval validation), so the placeholder maps to it. */
+const SKILL_HOME_TOKEN = '__SKILL_HOME__';
 const CODEX_PLUGIN_ROOT = '${CODEX_PLUGIN_ROOT}';
+
+/** Substitute the toolkit-home placeholder for the Codex plugin layout. */
+function subSkillHome(text: string): string {
+  return text.split(SKILL_HOME_TOKEN).join(CODEX_PLUGIN_ROOT);
+}
 
 interface PluginMeta {
   name: string;
@@ -61,8 +67,10 @@ function tomlStringArray(values: readonly string[]): string {
  *     scripts/<name>                    (yolo, doc-check-links.sh)
  *     docs/AGENTS.md                    (project context, if present)
  *
- * Per d12: zero `notify` entries — `notify` is not a hook fallback. The
- * `hooks.json` shape mirrors the Claude Code emit pending a vendored Codex schema.
+ * `__SKILL_HOME__` in skill bodies / skill extras / agent prompts is substituted
+ * to `${CODEX_PLUGIN_ROOT}`. Per d12: zero `notify` entries — `notify` is not a
+ * hook fallback. The `hooks.json` shape mirrors the Claude Code emit pending a
+ * vendored Codex schema.
  */
 export function emitCodex(sources: CanonicalSources, outDir: string, meta: PluginMeta): void {
   rmSync(outDir, { recursive: true, force: true });
@@ -78,8 +86,8 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
   for (const { skill, bodyPath, extras } of sources.skills) {
     const def = skill.def;
     const fields: FrontmatterFields = { name: def.name, description: def.description };
-    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, readFileSync(bodyPath, 'utf8')));
-    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), readFileSync(abs, 'utf8'));
+    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, subSkillHome(readFileSync(bodyPath, 'utf8'))));
+    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), subSkillHome(readFileSync(abs, 'utf8')));
   }
 
   // Agents (personas) — one TOML file per role.
@@ -87,7 +95,7 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
     const def = agent.def;
     const lines = [
       `description = ${tomlBasicString(def.description)}`,
-      `developer_instructions = ${tomlMultilineString(readFileSync(promptPath, 'utf8'))}`,
+      `developer_instructions = ${tomlMultilineString(subSkillHome(readFileSync(promptPath, 'utf8')))}`,
       `model = ${tomlBasicString(def.model ?? 'opus')}`,
       `tools = ${tomlStringArray(aliasToolList('codex', def.tools))}`,
     ];

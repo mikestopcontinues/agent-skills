@@ -1,13 +1,28 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { loadCanonicalSources, type CanonicalSources } from '../src/generator/loadCanonicalSources.ts';
 import { emitClaudeCode } from '../src/generator/emit/claudeCode.ts';
 import { parseFrontmatter } from '../src/generator/frontmatter.ts';
 
 const PLUGIN_ROOT_TOKEN = '${CLAUDE_PLUGIN_ROOT}';
+const SKILL_HOME_TOKEN = '__SKILL_HOME__';
+
+/** Reverse the emit-time `__SKILL_HOME__` → `${CLAUDE_PLUGIN_ROOT}` substitution. */
+function unsubSkillHome(text: string): string {
+  return text.split(PLUGIN_ROOT_TOKEN).join(SKILL_HOME_TOKEN);
+}
+
+function walkFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const abs = join(dir, entry);
+    if (statSync(abs).isDirectory()) out.push(...walkFiles(abs));
+    else out.push(abs);
+  }
+  return out;
+}
 
 let sources: CanonicalSources;
 let out: string;
@@ -36,20 +51,10 @@ describe('emitClaudeCode — skills round-trip', () => {
       expect(fields['description']).toBe(def.description);
       // claude-code tool aliasing is identity; absent canonical tools → no `tools:` line.
       expect(fields['tools'] ?? null).toBe(def.tools ? def.tools.join(', ') : null);
-      // Body and extras are emitted verbatim.
-      expect(body).toBe(readFileSync(bodyPath, 'utf8'));
+      // Body and extras round-trip byte-exact once the toolkit-home substitution is reversed.
+      expect(unsubSkillHome(body)).toBe(readFileSync(bodyPath, 'utf8'));
       for (const [rel, abs] of extras.files) {
-        expect(readFileSync(join(out, 'skills', def.name, rel), 'utf8')).toBe(readFileSync(abs, 'utf8'));
-      }
-    }
-  });
-
-  it('ships review-doc/review-code with co-located persona prompts (every persona)', () => {
-    for (const skillName of ['review-doc', 'review-code']) {
-      for (const { agent, promptPath } of sources.agents) {
-        const file = join(out, 'skills', skillName, 'personas', `${agent.def.name}.md`);
-        expect(existsSync(file)).toBe(true);
-        expect(readFileSync(file, 'utf8')).toBe(readFileSync(promptPath, 'utf8'));
+        expect(unsubSkillHome(readFileSync(join(out, 'skills', def.name, rel), 'utf8'))).toBe(readFileSync(abs, 'utf8'));
       }
     }
   });
@@ -66,7 +71,7 @@ describe('emitClaudeCode — agents round-trip', () => {
       expect(fields['description']).toBe(def.description);
       expect(fields['model']).toBe(def.model);
       expect(fields['tools']).toBe(def.tools.join(', '));
-      expect(body).toBe(readFileSync(promptPath, 'utf8'));
+      expect(unsubSkillHome(body)).toBe(readFileSync(promptPath, 'utf8'));
     }
   });
 });
@@ -118,5 +123,16 @@ describe('emitClaudeCode — project context', () => {
     const file = join(out, 'docs', pc.def.harnessFilenames.claudeCode);
     expect(existsSync(file)).toBe(true);
     expect(readFileSync(file, 'utf8')).toBe(pc.def.content);
+  });
+});
+
+describe('emitClaudeCode — no leftover placeholder', () => {
+  it('no emitted file still contains the raw __SKILL_HOME__ token', () => {
+    const offenders: string[] = [];
+    for (const file of walkFiles(out)) {
+      const rel = relative(out, file).split(sep).join('/');
+      if (readFileSync(file, 'utf8').includes(SKILL_HOME_TOKEN)) offenders.push(rel);
+    }
+    expect(offenders).toEqual([]);
   });
 });

@@ -113,6 +113,6 @@ and a populated `Deferred` section listing each nit with reason
 
 ## Cross-cutting
 
-- New docs use `yolo new` (the pre-write-doc hook enforces
+- New docs use `__SKILL_HOME__/scripts/yolo new` (the pre-write-doc hook enforces
   this); revise-doc only edits existing docs, so this rarely applies.
 - Cross-references between docs use relative paths without anchors (per d06).

@@ -4,6 +4,17 @@ import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
 import type { CanonicalSources } from '../loadCanonicalSources.ts';
 
+/** Canonical placeholder for "the toolkit's install directory". v0.1 best guess
+ *  pending Ch10 eval — OpenCode plugin packages may expand `${OPENCODE_PLUGIN_DIR}`
+ *  in shipped content. */
+const SKILL_HOME_TOKEN = '__SKILL_HOME__';
+const OPENCODE_PLUGIN_DIR = '${OPENCODE_PLUGIN_DIR}';
+
+/** Substitute the toolkit-home placeholder for the OpenCode package layout. */
+function subSkillHome(text: string): string {
+  return text.split(SKILL_HOME_TOKEN).join(OPENCODE_PLUGIN_DIR);
+}
+
 interface PackageMeta {
   name: string;
   version: string;
@@ -113,9 +124,9 @@ export default plugin;
  *     scripts/<name>                    (yolo, doc-check-links.sh)
  *     docs/AGENTS.md                    (project context, if present)
  *
- * Consumers add the package to `opencode.json`'s `cfg.plugin`. Skill/agent
- * bodies are emitted verbatim; bundled files they reference resolve by
- * skill-relative path. The generated `src/plugin.ts` locates `hooks/<name>.sh`
+ * Consumers add the package to `opencode.json`'s `cfg.plugin`. `__SKILL_HOME__`
+ * in skill bodies / skill extras / agent prompts is substituted to
+ * `${OPENCODE_PLUGIN_DIR}`. The generated `src/plugin.ts` locates `hooks/<name>.sh`
  * relative to its own module URL at runtime.
  */
 export function emitOpenCode(sources: CanonicalSources, outDir: string, meta: PackageMeta): void {
@@ -145,8 +156,8 @@ export function emitOpenCode(sources: CanonicalSources, outDir: string, meta: Pa
   for (const { skill, bodyPath, extras } of sources.skills) {
     const def = skill.def;
     const fields: FrontmatterFields = { name: def.name, description: def.description };
-    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, readFileSync(bodyPath, 'utf8')));
-    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), readFileSync(abs, 'utf8'));
+    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, subSkillHome(readFileSync(bodyPath, 'utf8'))));
+    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), subSkillHome(readFileSync(abs, 'utf8')));
   }
 
   // Agents (personas) — OpenCode subagent `.md`: frontmatter (mode/model/tools),
@@ -156,7 +167,7 @@ export function emitOpenCode(sources: CanonicalSources, outDir: string, meta: Pa
     const fields: FrontmatterFields = { mode: 'subagent' };
     if (def.model !== undefined) fields['model'] = def.model;
     fields['tools'] = aliasToolList('opencode', def.tools).join(', ');
-    write(join(outDir, 'agents', `${def.name}.md`), composeArtifact(fields, readFileSync(promptPath, 'utf8')));
+    write(join(outDir, 'agents', `${def.name}.md`), composeArtifact(fields, subSkillHome(readFileSync(promptPath, 'utf8'))));
   }
 
   // Shipped scripts.

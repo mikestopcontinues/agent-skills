@@ -69,7 +69,7 @@ In order of precedence:
   - Set project context: path, name, status (from README frontmatter when
     present), open spike/plan inventory
 - **Resolved to a new project** (name supplied, directory does not exist):
-  - Invoke `yolo new project <name>` — the CLI assigns the next free
+  - Invoke `__SKILL_HOME__/scripts/yolo new project <name>` — the CLI assigns the next free
     `xNNN-` and seeds the canonical layout (`README.md` charter with
     `status: active` frontmatter and `## One-liner` / `## Why` /
     `## In Scope` / `## Out of Scope` / `## Success Criteria` headings;

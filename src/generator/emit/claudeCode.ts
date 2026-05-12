@@ -4,12 +4,17 @@ import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
 import type { CanonicalSources } from '../loadCanonicalSources.ts';
 
-/** Claude Code expands `${CLAUDE_PLUGIN_ROOT}` inside `hooks/hooks.json` command
- *  strings (and `.mcp.json`, `monitors.json`) — but NOT inside skill/agent body
- *  text. Skill bodies therefore reference bundled files by skill-relative paths
- *  (`focuses/<f>.md`, `personas/<p>.md`), which resolve from the skill's own
- *  directory. The only use of this token in the bundle is the hook commands. */
+/** Canonical placeholder for "the toolkit's install directory". Claude Code
+ *  expands `${CLAUDE_PLUGIN_ROOT}` both inside `hooks/hooks.json` command strings
+ *  and inside plugin-shipped skill/agent body text, so the placeholder maps to it
+ *  directly. */
+const SKILL_HOME_TOKEN = '__SKILL_HOME__';
 const CC_PLUGIN_ROOT = '${CLAUDE_PLUGIN_ROOT}';
+
+/** Substitute the toolkit-home placeholder for the Claude Code plugin layout. */
+function subSkillHome(text: string): string {
+  return text.split(SKILL_HOME_TOKEN).join(CC_PLUGIN_ROOT);
+}
 
 interface PluginMeta {
   name: string;
@@ -39,8 +44,8 @@ function copyExecutable(from: string, to: string): void {
  *     scripts/<name>                    (yolo, doc-check-links.sh)
  *     docs/CLAUDE.md                    (project context, if present)
  *
- * Skill/agent bodies are emitted verbatim; bundled files they reference are
- * resolved by skill-relative path at runtime, not by token substitution.
+ * `__SKILL_HOME__` in skill bodies / skill extras / agent prompts is substituted
+ * to `${CLAUDE_PLUGIN_ROOT}`, which Claude Code expands in plugin-shipped content.
  */
 export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: PluginMeta): void {
   rmSync(outDir, { recursive: true, force: true });
@@ -57,8 +62,8 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
     const def = skill.def;
     const fields: FrontmatterFields = { name: def.name, description: def.description };
     if (def.tools !== undefined) fields['tools'] = aliasToolList('claude-code', def.tools).join(', ');
-    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, readFileSync(bodyPath, 'utf8')));
-    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), readFileSync(abs, 'utf8'));
+    write(join(outDir, 'skills', def.name, 'SKILL.md'), composeArtifact(fields, subSkillHome(readFileSync(bodyPath, 'utf8'))));
+    for (const [rel, abs] of extras.files) write(join(outDir, 'skills', def.name, rel), subSkillHome(readFileSync(abs, 'utf8')));
   }
 
   // Agents (personas).
@@ -67,7 +72,7 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
     const fields: FrontmatterFields = { name: def.name, description: def.description };
     if (def.model !== undefined) fields['model'] = def.model;
     fields['tools'] = aliasToolList('claude-code', def.tools).join(', ');
-    write(join(outDir, 'agents', `${def.name}.md`), composeArtifact(fields, readFileSync(promptPath, 'utf8')));
+    write(join(outDir, 'agents', `${def.name}.md`), composeArtifact(fields, subSkillHome(readFileSync(promptPath, 'utf8'))));
   }
 
   // Hooks — bash handler scripts + a hooks.json grouping them by (event, matcher).

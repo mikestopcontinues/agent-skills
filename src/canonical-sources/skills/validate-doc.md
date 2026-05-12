@@ -74,7 +74,7 @@ failure mode the eval explicitly checks for.
 Each subagent prompt must include: `artifact path`, `focus name`, target
 `rNN-{focus}.md` filename, iteration number, and the calling skill's name (for
 context). The `review-doc` subagent is responsible for resolving the focus brief
-(its co-located `focuses/<focus>.md`), adopting the persona that brief
+(`__SKILL_HOME__/skills/review-doc/focuses/<focus>.md`), adopting the persona that brief
 names, and writing the target file. (`review-doc` does not load a per-focus
 reviewer agent — there are no such agents; focuses are briefs, dispatched against
 personas.)

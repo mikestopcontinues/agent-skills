@@ -59,15 +59,6 @@ describe('CC bundle — plugin-root references resolve within the bundle', () =>
     );
     expect(readdirSync(join(bundle, 'skills', 'review-code', 'focuses')).sort()).toEqual(['accuracy.md', 'architecture.md', 'dx.md']);
   });
-
-  it('each review skill ships every persona prompt it might adopt (personas/<name>.md)', () => {
-    const expected = readdirSync(join(bundle, 'agents'))
-      .filter((f) => f.endsWith('.md'))
-      .sort();
-    for (const skillName of ['review-doc', 'review-code']) {
-      expect(readdirSync(join(bundle, 'skills', skillName, 'personas')).sort()).toEqual(expected);
-    }
-  });
 });
 
 describe('CC bundle — manifests + scripts', () => {

@@ -24,19 +24,19 @@ captain for ad-hoc work.
 ## Delegation Rule (hard)
 
 **Never bypass the scaffold for new prefixed top-level docs.** Files of these
-shapes MUST be created via the `yolo new` CLI:
+shapes MUST be created via the `__SKILL_HOME__/scripts/yolo new` CLI:
 
 | New file shape | Scaffold |
 |----------------|----------|
-| `docs/spikes/sNNN-<name>/README.md` | `yolo new spike <project> <name>` |
-| `docs/plans/pNNN-<name>/README.md` | `yolo new plan <project> <name>` |
-| `docs/notes/<name>.md` (top-level note) | `yolo new note --global <name>` |
+| `docs/spikes/sNNN-<name>/README.md` | `__SKILL_HOME__/scripts/yolo new spike <project> <name>` |
+| `docs/plans/pNNN-<name>/README.md` | `__SKILL_HOME__/scripts/yolo new plan <project> <name>` |
+| `docs/notes/<name>.md` (top-level note) | `__SKILL_HOME__/scripts/yolo new note --global <name>` |
 
 The CLI assigns the next free number, places the file at the canonical
 path, seeds frontmatter, and emits a JSON envelope whose `filePath` field
 names the created file. Picking numbers manually or writing the file
 directly via `Write` is forbidden — the `pre-write-doc` hook will block
-it. Project-scope notes use `yolo new note <project-slug> <name>` instead
+it. Project-scope notes use `__SKILL_HOME__/scripts/yolo new note <project-slug> <name>` instead
 of `--global`.
 
 **Direct write/edit is correct for**:
@@ -96,7 +96,7 @@ use repo-relative paths from `docs/`.
 
 ### 5. Validate
 
-- If cross-references changed, run `doc-check-links.sh`
+- If cross-references changed, run `__SKILL_HOME__/scripts/doc-check-links.sh`
 - Re-read the edited file end-to-end before handing back
 
 ### 6. Brief the captain

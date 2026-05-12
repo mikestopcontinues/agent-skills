@@ -45,14 +45,14 @@ Delegate numbering to the CLI (per-scope sequential — project-scope numbers
 do not collide with global-scope numbers; the same `dNN` may exist in both):
 
 ```bash
-yolo new decision <project|--global> <name>
+__SKILL_HOME__/scripts/yolo new decision <project|--global> <name>
 ```
 
 The CLI emits a JSON envelope on stdout. Parse `filePath` to learn where
 the decision landed:
 
 ```bash
-result=$(yolo new decision "$scope" "$name")
+result=$(__SKILL_HOME__/scripts/yolo new decision "$scope" "$name")
 file_path=$(printf '%s' "$result" | jq -r '.filePath')
 ```
 
