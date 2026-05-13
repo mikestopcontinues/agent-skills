@@ -66,6 +66,16 @@ describe('cross-harness — counts', () => {
       ).toEqual(expected);
     }
   });
+
+  it('every shipped hook handler has the executable bit set in every harness', () => {
+    const offenders: string[] = [];
+    for (const h of harnesses) {
+      for (const name of readdirSync(join(dirs[h], 'hooks')).filter((f) => f.endsWith('.sh'))) {
+        if ((statSync(join(dirs[h], 'hooks', name)).mode & 0o111) === 0) offenders.push(`${h}/${name}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe('cross-harness — skill identity', () => {

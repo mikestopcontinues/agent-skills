@@ -78,6 +78,14 @@ describe('CC bundle — manifests + scripts', () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it('hook scripts are executable (Claude Code execs hook command paths directly)', () => {
+    const offenders: string[] = [];
+    for (const name of readdirSync(join(bundle, 'hooks')).filter((f) => f.endsWith('.sh'))) {
+      if ((statSync(join(bundle, 'hooks', name)).mode & 0o111) === 0) offenders.push(name);
+    }
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe('CC bundle — hook scripts run cleanly on a benign input', () => {

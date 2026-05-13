@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
@@ -35,9 +35,13 @@ function write(path: string, contents: string): void {
   writeFileSync(path, contents);
 }
 
+/** Copy a file and ensure it's executable (`0o755`). Used for hook handlers and
+ *  shipped scripts — the OpenCode plugin spawns hook handlers as bash subprocesses,
+ *  but keeping the bit set is correct hygiene and matches the other emitters. */
 function copyExecutable(from: string, to: string): void {
   mkdirSync(dirname(to), { recursive: true });
   cpSync(from, to);
+  chmodSync(to, 0o755);
 }
 
 /** OpenCode canonical events map onto its `tool.execute.before` hook; v0.1 only
@@ -147,7 +151,7 @@ export function emitOpenCode(sources: CanonicalSources, outDir: string, meta: Pa
   const compiled: CompiledHook[] = [];
   for (const { hook, handlerPath } of sources.hooks) {
     const def = hook.def;
-    write(join(outDir, 'hooks', `${def.name}.sh`), readFileSync(handlerPath, 'utf8'));
+    copyExecutable(handlerPath, join(outDir, 'hooks', `${def.name}.sh`));
     compiled.push({ name: def.name, event: def.event, toolNames: def.matcher === '' ? [] : def.matcher.split('|') });
   }
   write(join(outDir, 'src', 'plugin.ts'), renderPluginTs(compiled));

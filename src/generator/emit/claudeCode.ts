@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { aliasToolList } from '../aliases/toolNames.ts';
 import { composeArtifact, type FrontmatterFields } from '../frontmatter.ts';
@@ -27,9 +27,14 @@ function write(path: string, contents: string): void {
   writeFileSync(path, contents);
 }
 
+/** Copy a file and ensure it's executable (`0o755`). Used for hook handlers and
+ *  shipped scripts (`yolo`, `doc-check-links.sh`) — Claude Code execs hook
+ *  command paths directly, so the bit must be set in the bundle regardless of
+ *  what the on-disk source happens to be. */
 function copyExecutable(from: string, to: string): void {
   mkdirSync(dirname(to), { recursive: true });
   cpSync(from, to);
+  chmodSync(to, 0o755);
 }
 
 /**
@@ -83,7 +88,7 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
   const byEvent = new Map<string, Map<string, HookEntry[]>>();
   for (const { hook, handlerPath } of sources.hooks) {
     const def = hook.def;
-    write(join(outDir, 'hooks', `${def.name}.sh`), readFileSync(handlerPath, 'utf8'));
+    copyExecutable(handlerPath, join(outDir, 'hooks', `${def.name}.sh`));
     if (!byEvent.has(def.event)) byEvent.set(def.event, new Map());
     const byMatcher = byEvent.get(def.event)!;
     if (!byMatcher.has(def.matcher)) byMatcher.set(def.matcher, []);
