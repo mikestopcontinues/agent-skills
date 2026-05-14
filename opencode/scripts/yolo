@@ -1,0 +1,551 @@
+#!/usr/bin/env bash
+# yolo — agent skills toolkit CLI (v0.1: `yolo new` only).
+# Outputs JSON by default (machine-parseable); `--human` flag pretty-prints.
+
+set -uo pipefail
+
+SCHEMA_VERSION=1
+HUMAN=0
+
+# escapes a string for JSON: backslash, quote, control chars
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+emit_success() {
+  local kind="$1" path="$2" file_path="$3" number="$4"
+  if [[ "$HUMAN" == "1" ]]; then
+    if [[ -n "$number" ]]; then
+      printf 'Created %s (kind=%s, number=%s)\n' "$file_path" "$kind" "$number"
+    else
+      printf 'Created %s (kind=%s)\n' "$file_path" "$kind"
+    fi
+    printf '  path: %s\n' "$path"
+    return 0
+  fi
+  local num_field
+  if [[ -n "$number" ]]; then
+    num_field=", \"number\": ${number}"
+  else
+    num_field=", \"number\": null"
+  fi
+  printf '{"ok": true, "kind": "%s", "path": "%s", "filePath": "%s"%s, "schemaVersion": %s}\n' \
+    "$(json_escape "$kind")" \
+    "$(json_escape "$path")" \
+    "$(json_escape "$file_path")" \
+    "$num_field" \
+    "$SCHEMA_VERSION"
+}
+
+emit_error() {
+  local code="$1" message="$2" exit_code="${3:-1}"
+  if [[ "$HUMAN" == "1" ]]; then
+    printf 'error[%s]: %s\n' "$code" "$message" >&2
+  else
+    printf '{"ok": false, "code": "%s", "message": "%s", "schemaVersion": %s}\n' \
+      "$(json_escape "$code")" \
+      "$(json_escape "$message")" \
+      "$SCHEMA_VERSION" >&2
+  fi
+  exit "$exit_code"
+}
+
+normalize_name() {
+  local raw="$1"
+  printf '%s' "$raw" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9]/-/g' \
+    | sed 's/--*/-/g' \
+    | sed 's/^-//;s/-$//'
+}
+
+require_root() {
+  ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || \
+    emit_error "internal" "not inside a git repository" 2
+  DOCS="$ROOT/docs"
+}
+
+# resolve_project <scope-arg> -> sets PROJECT_DIR (absolute) and PROJECT_SLUG (basename)
+# emits missing-project on no match; invalid-arg on ambiguous match
+resolve_project() {
+  local scope="$1"
+  PROJECT_DIR=""
+  PROJECT_SLUG=""
+  if [[ -d "$DOCS/$scope" ]]; then
+    PROJECT_DIR="$DOCS/$scope"
+    PROJECT_SLUG="$scope"
+    return 0
+  fi
+  local matches=()
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && matches+=("$line")
+  done < <(find "$DOCS" -mindepth 1 -maxdepth 1 -type d -name "x*-${scope}*" 2>/dev/null | sort)
+  if [[ ${#matches[@]} -eq 0 ]]; then
+    while IFS= read -r line; do
+      [[ -n "$line" ]] && matches+=("$line")
+    done < <(find "$DOCS" -mindepth 1 -maxdepth 1 -type d -name "x*-${scope}" 2>/dev/null | sort)
+  fi
+  if [[ ${#matches[@]} -eq 0 ]]; then
+    emit_error "missing-project" "no project found matching '${scope}' under docs/" 1
+  fi
+  if [[ ${#matches[@]} -gt 1 ]]; then
+    local list=""
+    for m in "${matches[@]}"; do
+      list+="$(basename "$m") "
+    done
+    emit_error "missing-project" "ambiguous project scope '${scope}'; matches: ${list}" 1
+  fi
+  PROJECT_DIR="${matches[0]}"
+  PROJECT_SLUG="$(basename "$PROJECT_DIR")"
+}
+
+# next_numbered_dir <parent-dir> <prefix-letter> <pad-width>
+# scans <parent>/<prefix>NN-* and prints the next zero-padded number
+next_numbered_dir() {
+  local parent="$1" prefix="$2" width="$3"
+  local max=0
+  if [[ -d "$parent" ]]; then
+    local entry base num
+    for entry in "$parent"/"$prefix"[0-9]*-*/; do
+      [[ -d "$entry" ]] || continue
+      base=$(basename "$entry")
+      num=$(printf '%s' "$base" | sed -nE "s/^${prefix}([0-9]+)-.*/\1/p")
+      if [[ -n "$num" ]] && (( 10#$num > max )); then
+        max=$((10#$num))
+      fi
+    done
+  fi
+  printf "%0${width}d" $((max + 1))
+}
+
+# find_existing_dir_by_name <parent> <prefix> <name> -> echoes basename if any
+# (silent collision check: an entry with the same -<name> tail at any number)
+find_existing_dir_by_name() {
+  local parent="$1" prefix="$2" name="$3"
+  if [[ -d "$parent" ]]; then
+    local entry base
+    for entry in "$parent"/"$prefix"[0-9]*-"$name"/; do
+      [[ -d "$entry" ]] || continue
+      base=$(basename "$entry")
+      printf '%s' "$base"
+      return 0
+    done
+  fi
+  return 1
+}
+
+# find_existing_file_by_name <parent> <prefix> <name> -> echoes basename if any
+find_existing_file_by_name() {
+  local parent="$1" prefix="$2" name="$3"
+  if [[ -d "$parent" ]]; then
+    local entry base
+    for entry in "$parent"/"$prefix"[0-9]*-"$name".md; do
+      [[ -f "$entry" ]] || continue
+      base=$(basename "$entry")
+      printf '%s' "$base"
+      return 0
+    done
+  fi
+  return 1
+}
+
+# find_existing_chapter_by_name <parent> <name> -> echoes basename if any
+find_existing_chapter_by_name() {
+  local parent="$1" name="$2"
+  if [[ -d "$parent" ]]; then
+    local entry base
+    for entry in "$parent"/[0-9]*-"$name".md; do
+      [[ -f "$entry" ]] || continue
+      base=$(basename "$entry")
+      printf '%s' "$base"
+      return 0
+    done
+  fi
+  return 1
+}
+
+# next_numbered_file <parent-dir> <prefix-letter> <pad-width>
+# scans <parent>/<prefix>NN-*.md and prints the next zero-padded number
+next_numbered_file() {
+  local parent="$1" prefix="$2" width="$3"
+  local max=0
+  if [[ -d "$parent" ]]; then
+    local entry base num
+    for entry in "$parent"/"$prefix"[0-9]*-*.md; do
+      [[ -f "$entry" ]] || continue
+      base=$(basename "$entry")
+      num=$(printf '%s' "$base" | sed -nE "s/^${prefix}([0-9]+)-.*/\1/p")
+      if [[ -n "$num" ]] && (( 10#$num > max )); then
+        max=$((10#$num))
+      fi
+    done
+  fi
+  printf "%0${width}d" $((max + 1))
+}
+
+# next_chapter_file <parent-dir> — chapters use no letter prefix; match [0-9]+-*.md
+next_chapter_file() {
+  local parent="$1"
+  local max=0
+  if [[ -d "$parent" ]]; then
+    local entry base num
+    for entry in "$parent"/[0-9]*-*.md; do
+      [[ -f "$entry" ]] || continue
+      base=$(basename "$entry")
+      num=$(printf '%s' "$base" | sed -nE 's/^([0-9]+)-.*/\1/p')
+      if [[ -n "$num" ]] && (( 10#$num > max )); then
+        max=$((10#$num))
+      fi
+    done
+  fi
+  printf "%02d" $((max + 1))
+}
+
+title_from_kebab() {
+  local kebab="$1"
+  printf '%s' "$kebab" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1'
+}
+
+cmd_new_project() {
+  local raw_name="${1:-}"
+  [[ -z "$raw_name" ]] && emit_error "missing-arg" "usage: yolo new project <name>" 1
+  local slug name num
+  if [[ "$raw_name" =~ ^x([0-9]+)-(.+)$ ]]; then
+    num="${BASH_REMATCH[1]}"
+    name=$(normalize_name "${BASH_REMATCH[2]}")
+    [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+    slug="x${num}-${name}"
+    if [[ -e "$DOCS/$slug" ]]; then
+      emit_error "collision" "project already exists at docs/${slug}/" 1
+    fi
+  else
+    name=$(normalize_name "$raw_name")
+    [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+    local existing
+    if existing=$(find_existing_dir_by_name "$DOCS" "x" "$name"); then
+      emit_error "collision" "project '${name}' already exists at docs/${existing}/" 1
+    fi
+    num=$(next_numbered_dir "$DOCS" "x" 3)
+    slug="x${num}-${name}"
+  fi
+  local proj_dir="$DOCS/$slug"
+  if [[ -e "$proj_dir" ]]; then
+    emit_error "collision" "project already exists at docs/${slug}/" 1
+  fi
+  mkdir -p "$proj_dir/notes" "$proj_dir/decisions" || \
+    emit_error "internal" "failed to create project directories" 2
+  local title; title=$(title_from_kebab "$name")
+  local readme="$proj_dir/README.md"
+  cat > "$readme" <<EOF || emit_error "internal" "failed to write README.md" 2
+# $title
+
+## Mission
+
+## Status
+
+## Active Work
+
+## Layers
+EOF
+  cat > "$proj_dir/tasks.md" <<EOF || emit_error "internal" "failed to write tasks.md" 2
+# $title — Task Backlog
+
+## In Flight
+
+## Up Next
+
+## Done
+EOF
+  emit_success "project" "docs/${slug}/" "docs/${slug}/README.md" "$((10#$num))"
+}
+
+cmd_new_spike() {
+  local scope="${1:-}" raw_name="${2:-}"
+  [[ -z "$scope" ]] && emit_error "missing-arg" "usage: yolo new spike <project> <name>" 1
+  [[ -z "$raw_name" ]] && emit_error "missing-arg" "usage: yolo new spike <project> <name>" 1
+  resolve_project "$scope"
+  local slug name num
+  if [[ "$raw_name" =~ ^s([0-9]+)-(.+)$ ]]; then
+    num="${BASH_REMATCH[1]}"
+    name=$(normalize_name "${BASH_REMATCH[2]}")
+    [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+    slug="s${num}-${name}"
+    if [[ -e "$PROJECT_DIR/$slug" ]]; then
+      emit_error "collision" "spike already exists at docs/${PROJECT_SLUG}/${slug}/" 1
+    fi
+  else
+    name=$(normalize_name "$raw_name")
+    [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+    local existing
+    if existing=$(find_existing_dir_by_name "$PROJECT_DIR" "s" "$name"); then
+      emit_error "collision" "spike '${name}' already exists at docs/${PROJECT_SLUG}/${existing}/" 1
+    fi
+    num=$(next_numbered_dir "$PROJECT_DIR" "s" 2)
+    slug="s${num}-${name}"
+  fi
+  local spike_dir="$PROJECT_DIR/$slug"
+  if [[ -e "$spike_dir" ]]; then
+    emit_error "collision" "spike already exists at docs/${PROJECT_SLUG}/${slug}/" 1
+  fi
+  mkdir -p "$spike_dir" || emit_error "internal" "failed to create spike directory" 2
+  local title; title=$(title_from_kebab "$name")
+  cat > "$spike_dir/README.md" <<EOF || emit_error "internal" "failed to write README.md" 2
+# $title
+
+## Core Questions
+
+1.
+
+## Scope
+
+## Findings
+
+## Recommendations
+EOF
+  emit_success "spike" "docs/${PROJECT_SLUG}/${slug}/" "docs/${PROJECT_SLUG}/${slug}/README.md" "$((10#$num))"
+}
+
+cmd_new_plan() {
+  local scope="${1:-}" raw_name="${2:-}"
+  [[ -z "$scope" ]] && emit_error "missing-arg" "usage: yolo new plan <project> <name>" 1
+  [[ -z "$raw_name" ]] && emit_error "missing-arg" "usage: yolo new plan <project> <name>" 1
+  resolve_project "$scope"
+  local slug name num
+  if [[ "$raw_name" =~ ^p([0-9]+)-(.+)$ ]]; then
+    num="${BASH_REMATCH[1]}"
+    name=$(normalize_name "${BASH_REMATCH[2]}")
+    [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+    slug="p${num}-${name}"
+    if [[ -e "$PROJECT_DIR/$slug" ]]; then
+      emit_error "collision" "plan already exists at docs/${PROJECT_SLUG}/${slug}/" 1
+    fi
+  else
+    name=$(normalize_name "$raw_name")
+    [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+    local existing
+    if existing=$(find_existing_dir_by_name "$PROJECT_DIR" "p" "$name"); then
+      emit_error "collision" "plan '${name}' already exists at docs/${PROJECT_SLUG}/${existing}/" 1
+    fi
+    num=$(next_numbered_dir "$PROJECT_DIR" "p" 2)
+    slug="p${num}-${name}"
+  fi
+  local plan_dir="$PROJECT_DIR/$slug"
+  if [[ -e "$plan_dir" ]]; then
+    emit_error "collision" "plan already exists at docs/${PROJECT_SLUG}/${slug}/" 1
+  fi
+  mkdir -p "$plan_dir" || emit_error "internal" "failed to create plan directory" 2
+  local title; title=$(title_from_kebab "$name")
+  cat > "$plan_dir/README.md" <<EOF || emit_error "internal" "failed to write README.md" 2
+# $title
+
+## Goal
+
+## Approach
+
+## Tasks
+
+## Risks
+EOF
+  emit_success "plan" "docs/${PROJECT_SLUG}/${slug}/" "docs/${PROJECT_SLUG}/${slug}/README.md" "$((10#$num))"
+}
+
+cmd_new_chapter() {
+  local scope="${1:-}" container="${2:-}" raw_name="${3:-}"
+  [[ -z "$scope" || -z "$container" || -z "$raw_name" ]] && \
+    emit_error "missing-arg" "usage: yolo new chapter <project> <spike-or-plan> <name>" 1
+  resolve_project "$scope"
+  local container_dir="$PROJECT_DIR/$container"
+  if [[ ! -d "$container_dir" ]]; then
+    emit_error "missing-project" "container not found: docs/${PROJECT_SLUG}/${container}/" 1
+  fi
+  local name; name=$(normalize_name "$raw_name")
+  [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+  local existing
+  if existing=$(find_existing_chapter_by_name "$container_dir" "$name"); then
+    emit_error "collision" "chapter '${name}' already exists at docs/${PROJECT_SLUG}/${container}/${existing}" 1
+  fi
+  local num; num=$(next_chapter_file "$container_dir")
+  local file_name="${num}-${name}.md"
+  local file_path="$container_dir/$file_name"
+  if [[ -e "$file_path" ]]; then
+    emit_error "collision" "chapter already exists at docs/${PROJECT_SLUG}/${container}/${file_name}" 1
+  fi
+  local title; title=$(title_from_kebab "$name")
+  cat > "$file_path" <<EOF || emit_error "internal" "failed to write chapter file" 2
+# $title
+
+## Purpose
+
+## Sources
+
+## Approach
+
+## Findings
+
+## Open Questions
+EOF
+  emit_success "chapter" "docs/${PROJECT_SLUG}/${container}/" "docs/${PROJECT_SLUG}/${container}/${file_name}" "$((10#$num))"
+}
+
+cmd_new_review() {
+  local scope="${1:-}" container="${2:-}" raw_focus="${3:-}"
+  [[ -z "$scope" || -z "$container" || -z "$raw_focus" ]] && \
+    emit_error "missing-arg" "usage: yolo new review <project> <spike-or-plan> <focus>" 1
+  resolve_project "$scope"
+  local container_dir="$PROJECT_DIR/$container"
+  if [[ ! -d "$container_dir" ]]; then
+    emit_error "missing-project" "container not found: docs/${PROJECT_SLUG}/${container}/" 1
+  fi
+  local focus; focus=$(normalize_name "$raw_focus")
+  [[ -z "$focus" ]] && emit_error "invalid-name" "focus normalizes to empty: '${raw_focus}'" 1
+  local existing
+  if existing=$(find_existing_file_by_name "$container_dir" "r" "$focus"); then
+    emit_error "collision" "review '${focus}' already exists at docs/${PROJECT_SLUG}/${container}/${existing}" 1
+  fi
+  local num; num=$(next_numbered_file "$container_dir" "r" 2)
+  local file_name="r${num}-${focus}.md"
+  local file_path="$container_dir/$file_name"
+  if [[ -e "$file_path" ]]; then
+    emit_error "collision" "review already exists at docs/${PROJECT_SLUG}/${container}/${file_name}" 1
+  fi
+  local title; title=$(title_from_kebab "$focus")
+  cat > "$file_path" <<EOF || emit_error "internal" "failed to write review file" 2
+# Review: $title
+
+## Scope
+
+## Findings
+
+## Recommendations
+EOF
+  emit_success "review" "docs/${PROJECT_SLUG}/${container}/" "docs/${PROJECT_SLUG}/${container}/${file_name}" "$((10#$num))"
+}
+
+cmd_new_decision() {
+  local scope="${1:-}" raw_name="${2:-}"
+  [[ -z "$scope" ]] && emit_error "missing-arg" "usage: yolo new decision <project|--global> <name>" 1
+  [[ -z "$raw_name" ]] && emit_error "missing-arg" "usage: yolo new decision <project|--global> <name>" 1
+  local dec_dir display_dir
+  if [[ "$scope" == "--global" ]]; then
+    dec_dir="$DOCS/decisions"
+    display_dir="docs/decisions"
+  else
+    resolve_project "$scope"
+    dec_dir="$PROJECT_DIR/decisions"
+    display_dir="docs/${PROJECT_SLUG}/decisions"
+  fi
+  mkdir -p "$dec_dir" || emit_error "internal" "failed to create decisions directory" 2
+  local name; name=$(normalize_name "$raw_name")
+  [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+  local existing
+  if existing=$(find_existing_file_by_name "$dec_dir" "d" "$name"); then
+    emit_error "collision" "decision '${name}' already exists at ${display_dir}/${existing}" 1
+  fi
+  local num; num=$(next_numbered_file "$dec_dir" "d" 2)
+  local file_name="d${num}-${name}.md"
+  local file_path="$dec_dir/$file_name"
+  if [[ -e "$file_path" ]]; then
+    emit_error "collision" "decision already exists at ${display_dir}/${file_name}" 1
+  fi
+  cat > "$file_path" <<EOF || emit_error "internal" "failed to write decision file" 2
+---
+status: active
+blocks: []
+supersedes: []
+---
+
+## Question
+
+## Context
+
+## Options
+
+## Recommendation
+
+## Decision
+EOF
+  emit_success "decision" "${display_dir}/" "${display_dir}/${file_name}" "$((10#$num))"
+}
+
+cmd_new_note() {
+  local scope="${1:-}" raw_name="${2:-}"
+  [[ -z "$scope" ]] && emit_error "missing-arg" "usage: yolo new note <project|--global> <name>" 1
+  [[ -z "$raw_name" ]] && emit_error "missing-arg" "usage: yolo new note <project|--global> <name>" 1
+  local note_dir display_dir
+  if [[ "$scope" == "--global" ]]; then
+    note_dir="$DOCS/notes"
+    display_dir="docs/notes"
+  else
+    resolve_project "$scope"
+    note_dir="$PROJECT_DIR/notes"
+    display_dir="docs/${PROJECT_SLUG}/notes"
+  fi
+  mkdir -p "$note_dir" || emit_error "internal" "failed to create notes directory" 2
+  local name; name=$(normalize_name "$raw_name")
+  [[ -z "$name" ]] && emit_error "invalid-name" "name normalizes to empty: '${raw_name}'" 1
+  local file_name="${name}.md"
+  local file_path="$note_dir/$file_name"
+  if [[ -e "$file_path" ]]; then
+    emit_error "collision" "note already exists at ${display_dir}/${file_name}" 1
+  fi
+  local title; title=$(title_from_kebab "$name")
+  cat > "$file_path" <<EOF || emit_error "internal" "failed to write note file" 2
+# $title
+
+## Core Questions
+
+1.
+
+## Scope
+EOF
+  emit_success "note" "${display_dir}/" "${display_dir}/${file_name}" ""
+}
+
+dispatch_new() {
+  local kind="${1:-}"
+  shift || true
+  case "$kind" in
+    "")        emit_error "missing-arg" "usage: yolo new <project|spike|plan|chapter|review|decision|note> <args>" 1 ;;
+    project)   cmd_new_project "$@" ;;
+    spike)     cmd_new_spike "$@" ;;
+    plan)      cmd_new_plan "$@" ;;
+    chapter)   cmd_new_chapter "$@" ;;
+    review)    cmd_new_review "$@" ;;
+    decision)  cmd_new_decision "$@" ;;
+    note)      cmd_new_note "$@" ;;
+    *)         emit_error "invalid-kind" "unknown kind: '${kind}' (valid: project|spike|plan|chapter|review|decision|note)" 1 ;;
+  esac
+}
+
+# strip --human anywhere in argv before subcommand dispatch
+parse_global_flags() {
+  local out=()
+  for a in "$@"; do
+    if [[ "$a" == "--human" ]]; then
+      HUMAN=1
+    else
+      out+=("$a")
+    fi
+  done
+  ARGS=("${out[@]+"${out[@]}"}")
+}
+
+main() {
+  parse_global_flags "$@"
+  set -- "${ARGS[@]+"${ARGS[@]}"}"
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    "")  emit_error "missing-arg" "usage: yolo <new> <kind> <args>" 1 ;;
+    new) require_root; dispatch_new "$@" ;;
+    *)   emit_error "invalid-kind" "unknown command: '${cmd}' (valid: new)" 1 ;;
+  esac
+}
+
+main "$@"

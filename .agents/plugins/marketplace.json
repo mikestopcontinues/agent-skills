@@ -1,0 +1,25 @@
+{
+  "name": "agent-skills-dev",
+  "interface": {
+    "displayName": "OpenSpike Agent Skills",
+    "shortDescription": "Lifecycle skills, persona agents, and governance hooks."
+  },
+  "plugins": [
+    {
+      "name": "agent-skills",
+      "source": {
+        "source": "local",
+        "path": "./codex"
+      },
+      "policy": {
+        "installation": "INSTALLED_BY_DEFAULT",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Engineering",
+      "interface": {
+        "displayName": "Agent Skills",
+        "shortDescription": "OpenSpike yolo-projects toolkit (Codex bundle)."
+      }
+    }
+  ]
+}

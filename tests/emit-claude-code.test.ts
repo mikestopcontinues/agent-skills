@@ -2,9 +2,9 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
-import { loadCanonicalSources, type CanonicalSources } from '../src/generator/loadCanonicalSources.ts';
-import { emitClaudeCode } from '../src/generator/emit/claudeCode.ts';
-import { parseFrontmatter } from '../src/generator/frontmatter.ts';
+import { loadCanonicalSources, type CanonicalSources } from '../generator/loadCanonicalSources.ts';
+import { emitClaudeCode } from '../generator/emit/claudeCode.ts';
+import { parseFrontmatter } from '../generator/frontmatter.ts';
 
 const PLUGIN_ROOT_TOKEN = '${CLAUDE_PLUGIN_ROOT}';
 const SKILL_HOME_TOKEN = '__SKILL_HOME__';

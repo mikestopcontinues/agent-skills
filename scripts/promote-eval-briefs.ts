@@ -5,12 +5,12 @@
  *
  * Source: `<openspike>/docs/x000-yolo-project/notes/eval-briefs/<task>-<artifact>.md`
  * (default `../openspike`; `OPENSPIKE_REPO` overrides). Targets:
- *   - `src/canonical-sources/skills/<name>.eval.md`
- *   - `src/canonical-sources/agents/<name>.eval.md`
- *   - `src/canonical-sources/hooks/<name>.eval.md`
- *   - `src/canonical-sources/skills/review-doc.extras/focuses/<focus>.eval.md`
- *   - `src/canonical-sources/skills/review-code.extras/focuses/<focus>.eval.md`
- *   - `src/scripts/yolo.eval.md`
+ *   - `generator/canonical-sources/skills/<name>.eval.md`
+ *   - `generator/canonical-sources/agents/<name>.eval.md`
+ *   - `generator/canonical-sources/hooks/<name>.eval.md`
+ *   - `generator/canonical-sources/skills/review-doc.extras/focuses/<focus>.eval.md`
+ *   - `generator/canonical-sources/skills/review-code.extras/focuses/<focus>.eval.md`
+ *   - `generator/scripts/yolo.eval.md`
  *
  * The same path-normalization the canonical bodies got is applied
  * (`.claude/scripts/yolo` / `doc-create.sh` → `yolo`, `doc-check-links.sh`
@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
-const canon = resolve(repoRoot, 'src/canonical-sources');
+const canon = resolve(repoRoot, 'generator/canonical-sources');
 const openspike = process.env['OPENSPIKE_REPO'] ?? resolve(repoRoot, '../openspike');
 const briefsDir = resolve(openspike, 'docs/x000-yolo-project/notes/eval-briefs');
 
@@ -135,8 +135,8 @@ for (const file of codeFocuses) {
 }
 
 // ── yolo CLI ────────────────────────────────────────────────────────────────
-if (!promote(join(repoRoot, 'src/scripts/yolo.eval.md'), 'yolo-cli')) {
-  stub(join(repoRoot, 'src/scripts/yolo.eval.md'), `# Eval brief: yolo CLI\n\n${STUB_TODO}\n`);
+if (!promote(join(repoRoot, 'generator/scripts/yolo.eval.md'), 'yolo-cli')) {
+  stub(join(repoRoot, 'generator/scripts/yolo.eval.md'), `# Eval brief: yolo CLI\n\n${STUB_TODO}\n`);
 }
 
 // ── project-context ─────────────────────────────────────────────────────────

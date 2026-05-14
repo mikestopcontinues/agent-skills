@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
-import { loadCanonicalSources } from '../src/generator/loadCanonicalSources.ts';
-import { ProjectContext } from '../src/factories/defineProjectContext.ts';
-import { aliasToolName, aliasToolList, deAliasToolName } from '../src/generator/aliases/toolNames.ts';
+import { loadCanonicalSources } from '../generator/loadCanonicalSources.ts';
+import { ProjectContext } from '../generator/factories/defineProjectContext.ts';
+import { aliasToolName, aliasToolList, deAliasToolName } from '../generator/aliases/toolNames.ts';
 
 describe('loadCanonicalSources', () => {
   it('aggregates the frozen Phase 1 inventory', async () => {

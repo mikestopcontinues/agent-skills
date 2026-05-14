@@ -3,9 +3,9 @@ import { glob } from 'glob';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Skill } from '../src/factories/defineSkill.ts';
-import { Agent } from '../src/factories/defineAgent.ts';
-import { Hook } from '../src/factories/defineHook.ts';
+import { Skill } from '../generator/factories/defineSkill.ts';
+import { Agent } from '../generator/factories/defineAgent.ts';
+import { Hook } from '../generator/factories/defineHook.ts';
 
 const repoRoot = resolve(import.meta.dirname, '..');
 
@@ -22,7 +22,7 @@ const EXPECTED = { skills: 21, agents: 11, hooks: 5 } as const;
 
 describe('canonical sources', () => {
   it('every skill module loads and exports a Skill instance', async () => {
-    const mods = await loadAll('src/canonical-sources/skills/*.ts');
+    const mods = await loadAll('generator/canonical-sources/skills/*.ts');
     expect(mods.length).toBe(EXPECTED.skills);
     for (const { file, mod } of mods) {
       expect(mod['skill'], `${file}: expected a \`skill\` export`).toBeInstanceOf(Skill);
@@ -30,7 +30,7 @@ describe('canonical sources', () => {
   });
 
   it('every agent module loads and exports an Agent instance', async () => {
-    const mods = await loadAll('src/canonical-sources/agents/*.ts');
+    const mods = await loadAll('generator/canonical-sources/agents/*.ts');
     expect(mods.length).toBe(EXPECTED.agents);
     for (const { file, mod } of mods) {
       expect(mod['agent'], `${file}: expected an \`agent\` export`).toBeInstanceOf(Agent);
@@ -38,7 +38,7 @@ describe('canonical sources', () => {
   });
 
   it('every hook module loads and exports a Hook instance', async () => {
-    const mods = await loadAll('src/canonical-sources/hooks/*.ts');
+    const mods = await loadAll('generator/canonical-sources/hooks/*.ts');
     expect(mods.length).toBe(EXPECTED.hooks);
     for (const { file, mod } of mods) {
       expect(mod['hook'], `${file}: expected a \`hook\` export`).toBeInstanceOf(Hook);
@@ -46,7 +46,7 @@ describe('canonical sources', () => {
   });
 
   it('skill names are unique and match their filename', async () => {
-    const mods = await loadAll('src/canonical-sources/skills/*.ts');
+    const mods = await loadAll('generator/canonical-sources/skills/*.ts');
     const names = new Set<string>();
     for (const { file, mod } of mods) {
       const skill = mod['skill'] as Skill;
@@ -59,10 +59,10 @@ describe('canonical sources', () => {
 
   it('every canonical artifact has a co-located, non-empty .eval.md sidecar', async () => {
     const tsFiles = [
-      ...(await glob('src/canonical-sources/skills/*.ts', { cwd: repoRoot, absolute: true })),
-      ...(await glob('src/canonical-sources/agents/*.ts', { cwd: repoRoot, absolute: true })),
-      ...(await glob('src/canonical-sources/hooks/*.ts', { cwd: repoRoot, absolute: true })),
-      resolve(repoRoot, 'src/canonical-sources/project-context.ts'),
+      ...(await glob('generator/canonical-sources/skills/*.ts', { cwd: repoRoot, absolute: true })),
+      ...(await glob('generator/canonical-sources/agents/*.ts', { cwd: repoRoot, absolute: true })),
+      ...(await glob('generator/canonical-sources/hooks/*.ts', { cwd: repoRoot, absolute: true })),
+      resolve(repoRoot, 'generator/canonical-sources/project-context.ts'),
     ];
     const missing: string[] = [];
     for (const tsFile of tsFiles) {

@@ -2,14 +2,16 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
-import { loadCanonicalSources, type CanonicalSources } from '../src/generator/loadCanonicalSources.ts';
-import { emitCodex } from '../src/generator/emit/codex.ts';
-import { parseFrontmatter } from '../src/generator/frontmatter.ts';
+import { loadCanonicalSources, type CanonicalSources } from '../generator/loadCanonicalSources.ts';
+import { emitCodex } from '../generator/emit/codex.ts';
+import { parseFrontmatter } from '../generator/frontmatter.ts';
 
-const PLUGIN_ROOT_TOKEN = '${CODEX_PLUGIN_ROOT}';
+const PLUGIN_ROOT_TOKEN = '${CLAUDE_PLUGIN_ROOT}';
 const SKILL_HOME_TOKEN = '__SKILL_HOME__';
 
-/** Reverse the emit-time `__SKILL_HOME__` → `${CODEX_PLUGIN_ROOT}` substitution. */
+/** Reverse the emit-time `__SKILL_HOME__` → `${CLAUDE_PLUGIN_ROOT}` substitution
+ *  (Codex injects the same token Claude Code does, for OOTB compat — verified
+ *  in `codex-rs/hooks/src/engine/discovery.rs`). */
 function unsubSkillHome(text: string): string {
   return text.split(PLUGIN_ROOT_TOKEN).join(SKILL_HOME_TOKEN);
 }

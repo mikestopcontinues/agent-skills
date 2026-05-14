@@ -4,13 +4,13 @@
  *
  * Reads `tests/snapshots/phase1-baseline/.claude/` (run `pnpm sync-baseline`
  * first if stale) and writes:
- *   - `src/canonical-sources/skills/<name>.ts`  + `<name>.md`   (body sidecar)
- *   - `src/canonical-sources/agents/<name>.ts`  + `<name>.md`   (prompt sidecar)
- *   - `src/canonical-sources/hooks/<name>.ts`   + `<name>.sh`   (handler sidecar)
+ *   - `generator/canonical-sources/skills/<name>.ts`  + `<name>.md`   (body sidecar)
+ *   - `generator/canonical-sources/agents/<name>.ts`  + `<name>.md`   (prompt sidecar)
+ *   - `generator/canonical-sources/hooks/<name>.ts`   + `<name>.sh`   (handler sidecar)
  *     + `<name>.test/`  (hook test fixtures, copied verbatim — not shipped)
- *   - `src/canonical-sources/skills/<name>.extras/**`  (focus briefs, chapter
+ *   - `generator/canonical-sources/skills/<name>.extras/**`  (focus briefs, chapter
  *     templates — extra files the skill ships alongside its SKILL.md)
- *   - `src/scripts/yolo`, `src/scripts/doc-check-links.sh`  (shipped scripts)
+ *   - `generator/scripts/yolo`, `generator/scripts/doc-check-links.sh`  (shipped scripts)
  *
  * This is a bootstrap tool — after transcription the canonical sources are the
  * source of truth and are hand-maintained. Re-running clobbers hand-edits to
@@ -44,17 +44,17 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ToolNameSchema, type ToolName } from '../src/factories/types/toolNames.ts';
-import { HookEventSchema, type HookEvent } from '../src/factories/types/hookTypes.ts';
+import { ToolNameSchema, type ToolName } from '../generator/factories/types/toolNames.ts';
+import { HookEventSchema, type HookEvent } from '../generator/factories/types/hookTypes.ts';
 import * as v from 'valibot';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
 const baseline = resolve(repoRoot, 'tests/snapshots/phase1-baseline/.claude');
-const canonSkills = resolve(repoRoot, 'src/canonical-sources/skills');
-const canonAgents = resolve(repoRoot, 'src/canonical-sources/agents');
-const canonHooks = resolve(repoRoot, 'src/canonical-sources/hooks');
-const srcScripts = resolve(repoRoot, 'src/scripts');
+const canonSkills = resolve(repoRoot, 'generator/canonical-sources/skills');
+const canonAgents = resolve(repoRoot, 'generator/canonical-sources/agents');
+const canonHooks = resolve(repoRoot, 'generator/canonical-sources/hooks');
+const srcScripts = resolve(repoRoot, 'generator/scripts');
 
 function fail(message: string): never {
   console.error(`transcribe-baseline: ${message}`);
@@ -281,5 +281,5 @@ for (const script of ['yolo', 'doc-check-links.sh']) {
 }
 
 console.log(
-  `transcribe-baseline: ${skillCount} skills, ${agentCount} agents, ${hookCount} hooks, 2 scripts → src/canonical-sources + src/scripts`,
+  `transcribe-baseline: ${skillCount} skills, ${agentCount} agents, ${hookCount} hooks, 2 scripts → generator/canonical-sources + generator/scripts`,
 );

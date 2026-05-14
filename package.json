@@ -4,6 +4,17 @@
   "private": true,
   "description": "Harness-neutral engineering toolkit — TS canonical sources for skills, agents, and hooks, with per-harness bundle emit (Claude Code, Codex, OpenCode).",
   "type": "module",
+  "main": "./opencode/src/plugin.ts",
+  "files": [
+    "claude/",
+    "codex/",
+    "opencode/",
+    ".claude-plugin/",
+    ".agents/",
+    "README.md",
+    "CLAUDE.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
   "engineStrict": true,
   "packageManager": "pnpm@10.33.0",
@@ -12,11 +23,12 @@
     "pnpm": "^10"
   },
   "scripts": {
-    "build": "node src/generator/build.ts",
-    "check": "run-s check:*",
+    "build": "node generator/build.ts",
+    "check": "run-s check:type check:lint check:test check:bundles",
     "check:type": "tsc --noEmit",
     "check:lint": "eslint .",
     "check:test": "vitest run --passWithNoTests",
+    "check:bundles": "node generator/build.ts && git diff --quiet claude/ codex/ opencode/ .claude-plugin/ .agents/ || (echo 'Bundles drifted — run pnpm build and commit the result' && exit 1)",
     "type": "tsc --noEmit",
     "type:watch": "tsc --noEmit --watch",
     "lint": "eslint . --fix",

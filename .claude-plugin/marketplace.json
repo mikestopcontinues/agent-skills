@@ -4,14 +4,37 @@
     "name": "mikestopcontinues"
   },
   "metadata": {
-    "description": "Local development marketplace for the agent-skills toolkit. The plugin source points at the built Claude Code bundle under dist/ — run `pnpm build` before adding/updating this marketplace."
+    "description": "OpenSpike agent-skills toolkit. Multi-target plugin: Claude Code (`./claude`), Codex (`./codex`), OpenCode (npm package), and skills via vercel-labs `npx skills add`."
   },
   "plugins": [
     {
       "name": "agent-skills",
-      "source": "./dist/bundles/claude-code",
-      "description": "Harness-neutral autonomous-project toolkit: lifecycle skills, persona agents, and governance hooks (Claude Code bundle).",
-      "version": "0.1.0"
+      "source": "./claude",
+      "description": "Lifecycle skills, persona agents, and governance hooks for the OpenSpike yolo-projects toolkit (Claude Code bundle).",
+      "version": "0.1.0",
+      "skills": [
+        "./claude/skills/archive-project",
+        "./claude/skills/create-decision",
+        "./claude/skills/create-note",
+        "./claude/skills/create-plan",
+        "./claude/skills/create-spike",
+        "./claude/skills/execute-plan",
+        "./claude/skills/grill-me",
+        "./claude/skills/launch-project",
+        "./claude/skills/lock-decisions",
+        "./claude/skills/process-feedback",
+        "./claude/skills/review-code",
+        "./claude/skills/review-doc",
+        "./claude/skills/revise-doc",
+        "./claude/skills/start-session",
+        "./claude/skills/triage-feedback",
+        "./claude/skills/validate-code",
+        "./claude/skills/validate-doc",
+        "./claude/skills/write-code",
+        "./claude/skills/write-convention",
+        "./claude/skills/write-doc",
+        "./claude/skills/yolo-project"
+      ]
     }
   ]
 }

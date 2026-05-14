@@ -5,7 +5,14 @@ import vitest from '@vitest/eslint-plugin';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'tests/snapshots/**', 'src/scripts/**'],
+    ignores: [
+      'claude/**',
+      'codex/**',
+      'opencode/**',
+      'node_modules/**',
+      'tests/snapshots/**',
+      'generator/scripts/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -15,7 +22,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    files: ['tests/**/*.test.ts', 'generator/**/*.test.ts'],
     plugins: { vitest },
     rules: vitest.configs.recommended.rules,
   },

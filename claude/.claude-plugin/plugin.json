@@ -1,0 +1,5 @@
+{
+  "name": "@mikestopcontinues/agent-skills",
+  "version": "0.1.0",
+  "description": "Harness-neutral engineering toolkit — TS canonical sources for skills, agents, and hooks, with per-harness bundle emit (Claude Code, Codex, OpenCode)."
+}

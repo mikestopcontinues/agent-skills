@@ -3,17 +3,18 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
-import { loadCanonicalSources, type CanonicalSources } from '../src/generator/loadCanonicalSources.ts';
-import { emitOpenCode } from '../src/generator/emit/opencode.ts';
-import { aliasToolList } from '../src/generator/aliases/toolNames.ts';
-import { parseFrontmatter } from '../src/generator/frontmatter.ts';
+import { loadCanonicalSources, type CanonicalSources } from '../generator/loadCanonicalSources.ts';
+import { emitOpenCode } from '../generator/emit/opencode.ts';
+import { aliasToolList } from '../generator/aliases/toolNames.ts';
+import { parseFrontmatter } from '../generator/frontmatter.ts';
 
-const PLUGIN_DIR_TOKEN = '${OPENCODE_PLUGIN_DIR}';
+const PLUGIN_ROOT_TOKEN = '${CLAUDE_PLUGIN_ROOT}';
 const SKILL_HOME_TOKEN = '__SKILL_HOME__';
 
-/** Reverse the emit-time `__SKILL_HOME__` → `${OPENCODE_PLUGIN_DIR}` substitution. */
+/** Reverse the emit-time `__SKILL_HOME__` → `${CLAUDE_PLUGIN_ROOT}` substitution
+ *  (cross-product convention; OpenCode behavior unverified for v0.1). */
 function unsubSkillHome(text: string): string {
-  return text.split(PLUGIN_DIR_TOKEN).join(SKILL_HOME_TOKEN);
+  return text.split(PLUGIN_ROOT_TOKEN).join(SKILL_HOME_TOKEN);
 }
 
 function walkFiles(dir: string): string[] {

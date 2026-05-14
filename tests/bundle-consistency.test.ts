@@ -3,8 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadCanonicalSources } from '../src/generator/loadCanonicalSources.ts';
-import { emitClaudeCode } from '../src/generator/emit/claudeCode.ts';
+import { loadCanonicalSources } from '../generator/loadCanonicalSources.ts';
+import { emitClaudeCode } from '../generator/emit/claudeCode.ts';
 
 /**
  * "Would the built Claude Code bundle actually work in a repo?" — internal

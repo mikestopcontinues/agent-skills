@@ -2,13 +2,13 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadCanonicalSources, type CanonicalSources } from '../src/generator/loadCanonicalSources.ts';
-import { emitClaudeCode } from '../src/generator/emit/claudeCode.ts';
-import { emitCodex } from '../src/generator/emit/codex.ts';
-import { emitOpenCode } from '../src/generator/emit/opencode.ts';
-import { parseFrontmatter } from '../src/generator/frontmatter.ts';
-import { aliasToolList, deAliasToolName } from '../src/generator/aliases/toolNames.ts';
-import type { HarnessId } from '../src/factories/types/harnessId.ts';
+import { loadCanonicalSources, type CanonicalSources } from '../generator/loadCanonicalSources.ts';
+import { emitClaudeCode } from '../generator/emit/claudeCode.ts';
+import { emitCodex } from '../generator/emit/codex.ts';
+import { emitOpenCode } from '../generator/emit/opencode.ts';
+import { parseFrontmatter } from '../generator/frontmatter.ts';
+import { aliasToolList, deAliasToolName } from '../generator/aliases/toolNames.ts';
+import type { HarnessId } from '../generator/factories/types/harnessId.ts';
 
 const META = { name: '@test/agent-skills', version: '0.0.0', description: 'test bundle' };
 
