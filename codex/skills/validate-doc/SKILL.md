@@ -75,13 +75,21 @@ assistant message. This is non-negotiable: sequential dispatch (one Task call,
 wait, next Task call) defeats the whole purpose of this skill and is a known
 failure mode the eval explicitly checks for.
 
+**The ONLY `subagent_type` this skill dispatches is `review-doc`.** Do NOT
+also dispatch the personas (`qa`, `architect`, `reviewer`, etc.) — `review-doc`
+adopts the brief's named persona internally (it `Read`s the persona's prompt
+and operates in that lens; it does not spawn the persona as a subagent). One
+focus → one `review-doc` dispatch, period. If you find yourself emitting an
+`Agent` / `Task` call with `subagent_type` set to anything other than
+`review-doc`, stop — that's the bug.
+
 Each subagent prompt must include: `artifact path`, `focus name`, target
 `rNN-{focus}.md` filename, iteration number, and the calling skill's name (for
-context). The `review-doc` subagent is responsible for resolving the focus brief
-(`${CLAUDE_PLUGIN_ROOT}/skills/review-doc/focuses/<focus>.md`), adopting the persona that brief
-names, and writing the target file. (`review-doc` does not load a per-focus
-reviewer agent — there are no such agents; focuses are briefs, dispatched against
-personas.)
+context). The `review-doc` subagent is responsible for resolving the focus
+brief (`${CLAUDE_PLUGIN_ROOT}/skills/review-doc/focuses/<focus>.md`), adopting the
+persona that brief names (by reading its prompt, never by dispatching it), and
+writing the target file. (There are no per-focus reviewer agents — focuses are
+briefs that the `review-doc` leaf executes through a named persona's lens.)
 
 ### 4. Wait for all subagents
 

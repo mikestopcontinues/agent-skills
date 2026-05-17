@@ -62,7 +62,11 @@ export function emitMarketplaces(sources: CanonicalSources, repoRoot: string, me
       {
         name: meta.name,
         source: { source: 'local', path: './codex' },
-        policy: { installation: 'INSTALLED_BY_DEFAULT', authentication: 'ON_INSTALL' },
+        // `AVAILABLE` matches the convention OpenAI's own bundled marketplaces
+        // use. Empirically, `INSTALLED_BY_DEFAULT` only auto-enables for Codex's
+        // own bundled marketplaces — user-added marketplaces always require an
+        // explicit enable (TUI `/plugins` toggle or manual config.toml entry).
+        policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
         category: 'Engineering',
         interface: {
           displayName: 'Agent Skills',

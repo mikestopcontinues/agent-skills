@@ -68,8 +68,16 @@ This skill does not impose a default; it dispatches what it is given.
 
 **Single-batch dispatch is mandatory.** Issue every `Dispatch`
 (Task) call inside one tool-call batch in a single assistant turn — never
-sequentially across turns. Each dispatched subagent is `review-code` with
-the inputs:
+sequentially across turns.
+
+**The ONLY `subagent_type` this skill dispatches is `review-code`.** Do NOT
+also dispatch the personas (`qa`, `architect`, `dx`, etc.) — `review-code`
+adopts the brief's named persona internally (by `Read`ing the persona's prompt
+and operating in that lens; not by spawning the persona as a subagent). One
+focus → one `review-code` dispatch, period. If you emit a `Task` call with
+`subagent_type` set to anything other than `review-code`, that's the bug.
+
+Each dispatched subagent is `review-code` with the inputs:
 
 - artifact path (the resolved diff path from step 1)
 - focus name
@@ -78,9 +86,10 @@ the inputs:
 - reviewDir
 
 Each `review-code` subagent resolves its focus brief
-(`${CLAUDE_PLUGIN_ROOT}/skills/review-code/focuses/<focus>.md`), adopts the persona that brief
-names, and writes the target file — it does not load a per-focus reviewer agent
-(no such agents exist; focuses are briefs dispatched against personas).
+(`${CLAUDE_PLUGIN_ROOT}/skills/review-code/focuses/<focus>.md`), adopts the persona
+that brief names (by reading its prompt, never by dispatching it), and writes
+the target file. There are no per-focus reviewer agents — focuses are briefs
+the `review-code` leaf executes through a named persona's lens.
 
 If iteration discipline requires it, prefix each subagent prompt with
 "eval mode" so reviewers respect any sleep instrumentation.
