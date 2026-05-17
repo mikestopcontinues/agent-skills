@@ -34,7 +34,8 @@
     "type:watch": "tsc --noEmit --watch",
     "lint": "eslint . --fix",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "release": "node tools/release.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -229,7 +229,28 @@ the "Local development against a live harness" section of [README.md](README.md)
   `opencode`), a layer (`generator`, `canonical-sources`), or an artifact
   (`skills`, `agents`, `hooks`).
 
-## Releasing
+## Versioning policy (pre-1.0)
 
-Currently pre-1.0; the version field stays at `0.1.0`. When the first
-public release happens, this section gets a version-bump checklist.
+`package.json#version` is the source of truth — each per-harness `plugin.json`
+inherits it via `emit*FromPackage`. Pre-1.0, the policy is: **bump
+`0.1.PATCH` on every commit that changes plugin-loaded content** (canonical
+sources, bundles, hooks/agents). Doc-only or generator-only commits don't
+need a bump.
+
+Why the discipline matters: `claude plugin update agent-skills@agent-skills-dev`
+is a no-op when the version field is unchanged. Without a bump, every dev
+loop requires the heavier `claude plugin uninstall && claude plugin install`
+to refresh CC's plugin cache (Codex's `marketplace upgrade` always refreshes
+regardless of version; OpenCode `npm link` is symlinked so it doesn't cache).
+
+`pnpm run release` is the helper:
+
+```bash
+# Bumps 0.1.N → 0.1.(N+1), regenerates bundles, stages package.json + bundles.
+# You commit the result.
+pnpm run release patch     # 0.1.0 → 0.1.1
+pnpm run release minor     # 0.1.0 → 0.2.0  (use for breaking namespace / API changes)
+```
+
+For the first public 1.0 release, this section will gain a CHANGELOG +
+release-checklist sub-section.
