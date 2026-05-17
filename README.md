@@ -130,6 +130,8 @@ Node ≥ 24 (native TypeScript type-stripping — `.ts` runs directly, no compil
 step). pnpm 10.
 
 ```bash
+git clone git@github.com:mikestopcontinues/agent-skills.git
+cd agent-skills
 pnpm install
 pnpm run build                # regenerate claude/, codex/, opencode/, and both marketplace files
 pnpm run check                # tsc --noEmit + eslint + vitest + drift check (build → git diff --quiet on bundles)
@@ -144,6 +146,107 @@ sources at every commit. CI runs `pnpm run check`.
 To add or modify a skill, agent, or hook: edit the `.ts` (and its sidecar
 `<name>.md` / `<name>.sh`) under `generator/canonical-sources/`, then
 `pnpm build` to regenerate the bundles.
+
+## Local development against a live harness
+
+Iterate on the toolkit by pointing your harnesses at the local checkout
+instead of the GitHub remote. The edit-build-reload loop is:
+
+```bash
+# Edit any file under generator/canonical-sources/
+$EDITOR generator/canonical-sources/skills/<name>/<name>.md
+# Regenerate the bundles
+pnpm run build
+# Reload the harness (see per-harness section below)
+```
+
+### Claude Code
+
+One-time setup — switch the marketplace source from GitHub to your local
+checkout:
+
+```bash
+claude plugin marketplace remove agent-skills-dev    # if previously added from github
+claude plugin marketplace add /path/to/agent-skills  # local-directory source
+claude plugin install agent-skills@agent-skills-dev
+```
+
+Per-iteration reload (after `pnpm run build`):
+
+```bash
+# The trick: `claude plugin update` compares the version field — it won't
+# refresh content if the version hasn't changed (it hasn't, during dev).
+# Force a real refresh with uninstall + reinstall:
+claude plugin uninstall agent-skills@agent-skills-dev
+claude plugin install agent-skills@agent-skills-dev
+```
+
+The next CC session sees the new content. **Skip this step at your peril** —
+CC keeps a content-cache copy at
+`~/.claude/plugins/cache/agent-skills-dev/agent-skills/0.1.0/` that won't
+auto-refresh from the local source even though the marketplace is
+local-sourced.
+
+### Codex
+
+One-time setup — same idea, swap GitHub for local:
+
+```bash
+codex plugin marketplace remove agent-skills-dev
+codex plugin marketplace add /path/to/agent-skills
+# Re-enable in ~/.codex/config.toml if it dropped:
+#   [plugins."agent-skills@agent-skills-dev"] enabled = true
+# Re-enable the feature flag if it dropped:
+codex features enable plugin_hooks
+# Re-trust hooks via TUI /plugins → Agent Skills → Hooks
+```
+
+Per-iteration reload (after `pnpm run build`):
+
+```bash
+codex plugin marketplace upgrade agent-skills-dev    # refreshes the cached copy
+```
+
+**Hook caveat**: any change to a hook's `.sh` body, matcher, or command
+invalidates that hook's trust hash. Codex will refuse to fire the hook
+until you re-trust it in the TUI. Skill / agent / script changes don't
+trigger re-trust.
+
+### OpenCode
+
+For the hook plugin, swap the npm install from the GitHub source to a
+local link:
+
+```bash
+cd /path/to/agent-skills && npm link        # one-time, registers globally
+cd /path/to/your-opencode-project
+npm link @mikestopcontinues/agent-skills    # consumes the local link
+```
+
+Per-iteration reload: just `pnpm run build` — `npm link` is symlinked so
+the linked package always sees the freshly-built bundle. Next OpenCode
+session picks it up.
+
+For skills (the `npx skills add` install at `.agents/skills/`), there's no
+local-source equivalent: it copies files at install time. Re-run
+`npx skills add mikestopcontinues/agent-skills` after each push if you
+want the universal install to reflect changes, or skip the universal path
+for dev and rely on the per-harness plugin install above.
+
+### The `as-reload` alias
+
+Wrap the full edit-build-reload loop:
+
+```bash
+# ~/.zshrc
+alias as-reload='cd ~/Code/agent-skills && pnpm run build \
+  && claude plugin uninstall agent-skills@agent-skills-dev \
+  && claude plugin install agent-skills@agent-skills-dev \
+  && codex plugin marketplace upgrade agent-skills-dev'
+```
+
+Edit canonical → `as-reload` → next session in any harness sees the
+changes (modulo the Codex hook re-trust if you touched hook bodies).
 
 ## Status
 
