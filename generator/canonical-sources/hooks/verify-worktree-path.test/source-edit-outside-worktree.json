@@ -1,7 +1,7 @@
 {
   "tool_name": "Edit",
   "tool_input": {
-    "file_path": "/Users/mike/Code/openspike/packages/core/src/index.ts",
+    "file_path": "__PROJECT_ROOT__/packages/core/src/index.ts",
     "old_string": "foo",
     "new_string": "bar"
   }

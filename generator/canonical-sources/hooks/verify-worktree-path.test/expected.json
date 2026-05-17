@@ -1,0 +1,19 @@
+{
+  "claude-config-edit": {
+    "deny": false,
+    "createDirs": [".claude/worktrees/worktree-anything"]
+  },
+  "doc-edit": {
+    "deny": false,
+    "createDirs": [".claude/worktrees/worktree-anything"]
+  },
+  "source-edit-in-worktree": {
+    "deny": false,
+    "createDirs": [".claude/worktrees/worktree-p018-foundation-hooks"]
+  },
+  "source-edit-outside-worktree": {
+    "deny": true,
+    "reasonContains": "Edit files in the worktree",
+    "createDirs": [".claude/worktrees/worktree-anything"]
+  }
+}

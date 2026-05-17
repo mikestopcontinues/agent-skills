@@ -120,6 +120,7 @@ OpenCode reads natively.
 | `opencode/` | OpenCode npm-package contents (`package.json#main` → `./opencode/src/plugin.ts`) |
 | `generator/canonical-sources/` | The authoring surface — `defineSkill` / `defineAgent` / `defineHook` / `defineProjectContext` calls. The filesystem is the registry. |
 | `generator/factories/` | The `define*` factories + their types and Valibot schemas |
+| `generator/aliases/` | Per-harness translation maps for canonical names (e.g. canonical `Dispatch` tool → CC `Dispatch`, Codex `spawn`, OpenCode `task`) |
 | `generator/emit/` | Per-harness emitters (`claudeCode.ts`, `codex.ts`, `opencode.ts`, `marketplaces.ts`) |
 | `generator/build.ts` | Entry point — `pnpm build` |
 | `tests/` | Round-trip, cross-harness, and bundle-coherence tests |

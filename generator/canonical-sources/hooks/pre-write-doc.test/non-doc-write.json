@@ -1,7 +1,7 @@
 {
   "tool_name": "Write",
   "tool_input": {
-    "file_path": "/Users/mike/Code/openspike/src/foo.ts",
+    "file_path": "__PROJECT_ROOT__/src/foo.ts",
     "content": "..."
   }
 }

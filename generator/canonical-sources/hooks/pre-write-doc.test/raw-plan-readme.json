@@ -1,7 +1,7 @@
 {
   "tool_name": "Write",
   "tool_input": {
-    "file_path": "/Users/mike/Code/openspike/docs/plans/p999-fixture/README.md",
+    "file_path": "__PROJECT_ROOT__/docs/plans/p999-fixture/README.md",
     "content": "..."
   }
 }

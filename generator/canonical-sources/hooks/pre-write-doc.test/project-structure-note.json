@@ -1,7 +1,7 @@
 {
   "tool_name": "Write",
   "tool_input": {
-    "file_path": "/Users/mike/Code/openspike/docs/x999-eval/notes/foo.md",
+    "file_path": "__PROJECT_ROOT__/docs/x999-eval/notes/foo.md",
     "content": "..."
   }
 }

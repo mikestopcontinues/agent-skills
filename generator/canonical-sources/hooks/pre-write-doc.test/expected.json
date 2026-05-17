@@ -1,0 +1,30 @@
+{
+  "doc-non-prefixed": {
+    "deny": false
+  },
+  "legitimate-skill-overwrite": {
+    "deny": false,
+    "createFiles": ["docs/x000-yolo-project/s01-harness-conversion/README.md"]
+  },
+  "non-doc-write": {
+    "deny": false
+  },
+  "project-structure-note": {
+    "deny": false
+  },
+  "project-structure-spike": {
+    "deny": false
+  },
+  "raw-note": {
+    "deny": true,
+    "reasonContains": "yolo new note"
+  },
+  "raw-plan-readme": {
+    "deny": true,
+    "reasonContains": "yolo new plan"
+  },
+  "raw-spike-readme": {
+    "deny": true,
+    "reasonContains": "yolo new spike"
+  }
+}
