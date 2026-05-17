@@ -55,8 +55,11 @@ describe('emitCodex — plugin manifest', () => {
     expect(manifest.version).toBe('0.0.0');
     expect(manifest.description).toBe('test bundle');
     // `skills` field is load-bearing — without it Codex enables the plugin but
-    // never surfaces its skills.
+    // never surfaces its skills. `hooks` field is similarly load-bearing —
+    // without it the bundled hooks.json is ignored and PreToolUse handlers
+    // never fire.
     expect(manifest.skills).toBe('./skills/');
+    expect(manifest.hooks).toBe('./hooks.json');
     expect(manifest.interface).toMatchObject({ displayName: 'Agent Skills', category: 'Engineering' });
   });
 });

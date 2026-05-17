@@ -82,11 +82,17 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
-  // Plugin manifest. The `skills` field is load-bearing — Codex's plugin loader
-  // refuses to surface skills without it (verified empirically: omitting it
-  // leaves the plugin enabled-but-invisible). `name` must match the marketplace
-  // entry (`plugins[].name`) so `<name>@<marketplace>` activation lines up.
-  // Reference shape: openai-bundled / openai-curated plugins.
+  // Plugin manifest. Three load-bearing fields, all verified against
+  // `codex-rs/core-plugins/src/manifest.rs` (RawPluginManifest):
+  //
+  // - `skills: "./skills/"` — without it Codex enables the plugin but never
+  //   surfaces its skills.
+  // - `hooks: "./hooks.json"` — without it Codex never registers the bundled
+  //   hooks (the hooks.json file alone isn't auto-discovered; the manifest must
+  //   point at it).
+  // - `name` matches the marketplace entry (`plugins[].name`) so
+  //   `<name>@<marketplace>` activation lines up and the skill namespace stays
+  //   clean (`agent-skills:<skill>` not `@scope/...:<skill>`).
   write(
     join(outDir, '.codex-plugin', 'plugin.json'),
     JSON.stringify(
@@ -95,6 +101,7 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
         version: meta.version,
         description: meta.description,
         skills: './skills/',
+        hooks: './hooks.json',
         interface: {
           displayName: 'Agent Skills',
           shortDescription: 'Lifecycle skills, persona agents, and governance hooks.',

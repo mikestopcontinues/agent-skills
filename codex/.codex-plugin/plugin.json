@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Harness-neutral engineering toolkit — TS canonical sources for skills, agents, and hooks, with per-harness bundle emit (Claude Code, Codex, OpenCode).",
   "skills": "./skills/",
+  "hooks": "./hooks.json",
   "interface": {
     "displayName": "Agent Skills",
     "shortDescription": "Lifecycle skills, persona agents, and governance hooks.",
