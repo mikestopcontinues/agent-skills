@@ -11,8 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        # Pin to packageManager field in package.json so CI matches local.
-        with: { version: 10 }
+        # The action reads `packageManager` from package.json (`pnpm@10.33.0`)
+        # and refuses if `version` is also set here — so the package.json pin
+        # is the single source of truth.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
