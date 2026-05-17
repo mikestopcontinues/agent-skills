@@ -8,29 +8,106 @@ Claude Code, Codex, and OpenCode (plus universal skills install via
 The repo IS the deliverable: clone (or point a marketplace at the GitHub URL)
 and any of four install verbs picks up the right bundle.
 
+## What you get
+
+| Component | Count | Examples |
+|-----------|-------|----------|
+| **Skills** | 21 | `create-spike`, `create-plan`, `execute-plan`, `validate-doc`, `triage-feedback`, `process-feedback`, `lock-decisions`, `start-session`, `yolo-project`, … |
+| **Persona agents** | 11 | `architect`, `qa`, `dx`, `reviewer`, `security`, `implementer`, `designer`, `researcher`, `verifier`, `doc-writer`, `conflict-resolver` |
+| **Governance hooks** | 5 | `block-main-edits` (refuse `git commit` on `main`/`master`), `pre-commit-gate` (run `pnpm run check`), `pre-write-doc` (require `yolo new` scaffolding for new docs), `pre-bash-doc` (verify doc-link integrity), `verify-worktree-path` (refuse edits outside the worktree) |
+| **CLI scripts** | 2 | `yolo new <kind> <args>` (project/spike/plan/chapter/review/note/decision scaffolder), `doc-check-links.sh` (cross-reference checker) |
+
+The skill / agent / hook inventory is canonical at
+`generator/canonical-sources/`. Each harness emit ships the same content in
+its native layout.
+
 ## Install
 
+Pick your harness. The first three install verbs all read this repo; the
+OpenCode npm path resolves the same content via `package.json#main`.
+
+### Claude Code
+
 ```bash
-# Claude Code
 claude plugin marketplace add github:mikestopcontinues/agent-skills
 claude plugin install agent-skills@agent-skills-dev
+```
 
-# Codex
+That's it. Skills appear as `@mikestopcontinues/agent-skills:<skill-name>`,
+the 11 personas register as dispatchable subagent types, and the 5 hooks
+fire automatically on matching tool events (no per-hook trust step — CC
+treats plugin-bundled hooks as managed).
+
+### Codex
+
+```bash
+# 1. Add the marketplace and enable the plugin
 codex plugin marketplace add mikestopcontinues/agent-skills
-# then either /plugins inside the Codex TUI to toggle on,
-# or add to ~/.codex/config.toml:
+# Then either toggle on inside the TUI (/plugins → Agent Skills → Install)
+# or add to ~/.codex/config.toml manually:
 #   [plugins."agent-skills@agent-skills-dev"]
 #   enabled = true
 
-# Universal — installs the skills (no hooks/agents) into ~/.agents/skills/
-# (works for 47 agent products including Claude Code, Codex, OpenCode, Cursor,
-# Gemini CLI, etc. — see https://github.com/vercel-labs/skills)
+# 2. Enable the plugin_hooks feature flag
+# Required for any plugin-bundled hooks to be discovered (Codex ≤0.130 keeps
+# this behind a flag). The 21 skills work without it; the 5 hooks do not.
+codex features enable plugin_hooks
+
+# 3. Trust the 5 plugin hooks (one-time, interactive)
+# Open the TUI: /plugins → Agent Skills → Hooks
+# Toggle each hook (block-main-edits, pre-bash-doc, pre-commit-gate,
+# pre-write-doc, verify-worktree-path) to Trusted. Codex writes
+# [hooks.state."agent-skills@agent-skills-dev:hooks.json:..."] trusted_hash
+# entries to ~/.codex/config.toml. Hooks fire on subsequent `codex exec` /
+# `codex` sessions.
+codex
+```
+
+Skills appear as `agent-skills:<skill-name>`. The persona agents ship as TOML
+files under `codex/agents/` and are loaded by the same plugin install.
+
+### Universal (vercel-labs/skills) — skills only
+
+```bash
+# Per-project (installs to ./.agents/skills/<name>/)
 npx skills add mikestopcontinues/agent-skills
 
-# OpenCode (npm)
-# in opencode.json:
-#   { "plugin": ["@mikestopcontinues/agent-skills"] }
+# User-wide (installs to ~/.agents/skills/<name>/)
+npx skills add -g mikestopcontinues/agent-skills
 ```
+
+Works for [47 agent products][vercel-labs/skills] including Claude Code,
+Codex, OpenCode, Cursor, Gemini CLI, Warp, GitHub Copilot. **Installs the
+skills only** — no persona agents, no hooks, no scripts — because the
+universal `.agents/skills/<name>/SKILL.md` convention is the only thing all
+47 agents agree on. For full hook / agent coverage on a specific harness,
+use that harness's native install path above.
+
+### OpenCode
+
+OpenCode has two install paths because its plugin and skill systems are
+separate concerns:
+
+```bash
+# Skills (via the universal route)
+npx skills add mikestopcontinues/agent-skills
+
+# Hooks (via npm + opencode.json)
+npm install @mikestopcontinues/agent-skills@github:mikestopcontinues/agent-skills
+```
+
+Then in `opencode.json`:
+
+```json
+{
+  "plugin": ["@mikestopcontinues/agent-skills"]
+}
+```
+
+The npm package's `package.json#main` points at `./opencode/src/plugin.ts`
+which OpenCode loads to register the 5 hooks via the `tool.execute.before`
+plugin API. Skills come from the `.agents/skills/` install path that
+OpenCode reads natively.
 
 ## What's in here
 
@@ -70,11 +147,17 @@ To add or modify a skill, agent, or hook: edit the `.ts` (and its sidecar
 
 ## Status
 
-v0.1 — Claude Code path fully exercised against the [vercel-labs/skills]
-spec, real codebases (labyrinth-life, svgbro), and a synthetic seeded repo;
-Codex path bundle-tested but the install flow is documented for explicit
-enable; OpenCode path emit-tested only (no live OpenCode eval yet). See the
-canonical sources in `generator/canonical-sources/` for the full skill /
-agent / hook inventory.
+v0.1 — all three native install paths exercised end-to-end against the
+public GitHub remote:
+
+- **Claude Code**: 21 skills + 11 agents + 5 hooks loaded and verified
+  firing against real codebases (labyrinth-life, svgbro, openspike).
+- **Codex**: 21 skills load under the `agent-skills:*` namespace; 5 hooks
+  fire after the `plugin_hooks` feature flag is enabled and trust is
+  granted (PreToolUse Bash deny verified live).
+- **OpenCode**: skills install via `npx skills add`; hook plugin loads via
+  the npm package + `opencode.json` plugin entry.
+- **Universal**: `npx skills add` discovers all 21 from
+  `plugins[].skills[]` in the marketplace.json.
 
 [vercel-labs/skills]: https://github.com/vercel-labs/skills
