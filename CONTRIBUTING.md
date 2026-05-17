@@ -17,6 +17,16 @@ pnpm run check               # type + lint + test + bundle drift — must pass g
 Node ≥ 24 (native TypeScript type-stripping; `.ts` runs without compile).
 pnpm 10. No build step before running tests.
 
+Other scripts:
+
+| Command | What it does |
+|---------|--------------|
+| `pnpm run build` | One-shot rebuild of `claude/`, `codex/`, `opencode/`, both `marketplace.json` files |
+| `pnpm run dev` | Watch mode — auto-rebuilds on changes under `generator/{canonical-sources,emit,factories,aliases}/` (uses Node 24's `--watch-path`; no dep) |
+| `pnpm run test:watch` | Vitest in watch mode |
+| `pnpm run type:watch` | `tsc --noEmit --watch` |
+| `pnpm run check:bundles` | Build + `git diff --quiet` on bundle dirs — fails if bundles drifted from canonical sources |
+
 ## How a canonical source is shaped
 
 Each artifact is two or three files in the same canonical-sources directory,

@@ -155,11 +155,16 @@ instead of the GitHub remote. The edit-build-reload loop is:
 
 ```bash
 # Edit any file under generator/canonical-sources/
-$EDITOR generator/canonical-sources/skills/<name>/<name>.md
-# Regenerate the bundles
+$EDITOR generator/canonical-sources/skills/<name>.md
+# Regenerate the bundles — one-shot, or use `pnpm run dev` for watch mode
 pnpm run build
 # Reload the harness (see per-harness section below)
 ```
+
+For an even tighter loop, `pnpm run dev` watches `generator/canonical-sources/`,
+`generator/emit/`, `generator/factories/`, and `generator/aliases/` and
+auto-rebuilds on any change. Edit → save → bundles regenerate. Then run the
+per-harness reload command below.
 
 ### Claude Code
 

@@ -24,6 +24,7 @@
   },
   "scripts": {
     "build": "node generator/build.ts",
+    "dev": "node --watch-path=generator/canonical-sources --watch-path=generator/emit --watch-path=generator/factories --watch-path=generator/aliases generator/build.ts",
     "check": "run-s check:type check:lint check:test check:bundles",
     "check:type": "tsc --noEmit",
     "check:lint": "eslint .",
