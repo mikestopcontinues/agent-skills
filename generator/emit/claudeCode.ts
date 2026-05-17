@@ -56,10 +56,16 @@ export function emitClaudeCode(sources: CanonicalSources, outDir: string, meta: 
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
-  // Plugin manifest.
+  // Plugin manifest. `name` aligns with the marketplace entry's
+  // `plugins[].name` ("agent-skills") rather than the npm-scoped package
+  // name — keeps the skill namespace clean (`agent-skills:create-spike` not
+  // `@mikestopcontinues/agent-skills:create-spike`) and matches the Codex
+  // emitter's choice. The npm-scoped package name stays in package.json for
+  // publish discoverability; it doesn't need to leak into the harness
+  // namespace.
   write(
     join(outDir, '.claude-plugin', 'plugin.json'),
-    JSON.stringify({ name: meta.name, version: meta.version, description: meta.description }, null, 2) + '\n',
+    JSON.stringify({ name: 'agent-skills', version: meta.version, description: meta.description }, null, 2) + '\n',
   );
 
   // Skills.

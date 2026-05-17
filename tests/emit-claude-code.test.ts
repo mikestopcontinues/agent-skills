@@ -34,9 +34,13 @@ beforeAll(async () => {
 });
 
 describe('emitClaudeCode — plugin manifest', () => {
-  it('writes a well-formed plugin.json', () => {
+  it('writes a well-formed plugin.json (name matches marketplace entry, not the npm-scoped meta.name)', () => {
     const manifest = JSON.parse(readFileSync(join(out, '.claude-plugin', 'plugin.json'), 'utf8')) as Record<string, unknown>;
-    expect(manifest).toEqual({ name: '@test/agent-skills', version: '0.0.0', description: 'test bundle' });
+    // Name is the marketplace-side plugin id (matches `plugins[].name` in
+    // marketplace.json), intentionally distinct from the npm-scoped meta.name
+    // so the skill namespace stays `agent-skills:<skill>` rather than
+    // `@test/agent-skills:<skill>` / `@mikestopcontinues/agent-skills:<skill>`.
+    expect(manifest).toEqual({ name: 'agent-skills', version: '0.0.0', description: 'test bundle' });
   });
 });
 
