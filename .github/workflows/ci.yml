@@ -11,9 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        # Pin to packageManager field in package.json so CI matches local.
+        with: { version: 10 }
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # check = type + lint + test + bundle-drift. check:bundles re-runs
+      # `pnpm build` then fails on `git diff --quiet` over bundle dirs — a PR
+      # that edits canonical sources without committing the regenerated bundles
+      # is blocked here.
       - run: pnpm run check
