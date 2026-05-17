@@ -46,9 +46,18 @@ beforeAll(async () => {
 });
 
 describe('emitCodex — plugin manifest', () => {
-  it('writes a well-formed plugin.json', () => {
+  it('writes a well-formed plugin.json (name matches marketplace entry, skills field present)', () => {
     const manifest = JSON.parse(readFileSync(join(out, '.codex-plugin', 'plugin.json'), 'utf8')) as Record<string, unknown>;
-    expect(manifest).toEqual({ name: '@test/agent-skills', version: '0.0.0', description: 'test bundle' });
+    // Name is the marketplace-side plugin id (matches `plugins[].name` in marketplace.json),
+    // not the meta.name from package.json — these intentionally diverge so the npm-scoped
+    // package name doesn't leak into the Codex plugin namespace.
+    expect(manifest.name).toBe('agent-skills');
+    expect(manifest.version).toBe('0.0.0');
+    expect(manifest.description).toBe('test bundle');
+    // `skills` field is load-bearing — without it Codex enables the plugin but
+    // never surfaces its skills.
+    expect(manifest.skills).toBe('./skills/');
+    expect(manifest.interface).toMatchObject({ displayName: 'Agent Skills', category: 'Engineering' });
   });
 });
 

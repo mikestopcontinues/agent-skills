@@ -82,10 +82,28 @@ export function emitCodex(sources: CanonicalSources, outDir: string, meta: Plugi
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
-  // Plugin manifest (minimal — no vendored Codex manifest schema yet).
+  // Plugin manifest. The `skills` field is load-bearing — Codex's plugin loader
+  // refuses to surface skills without it (verified empirically: omitting it
+  // leaves the plugin enabled-but-invisible). `name` must match the marketplace
+  // entry (`plugins[].name`) so `<name>@<marketplace>` activation lines up.
+  // Reference shape: openai-bundled / openai-curated plugins.
   write(
     join(outDir, '.codex-plugin', 'plugin.json'),
-    JSON.stringify({ name: meta.name, version: meta.version, description: meta.description }, null, 2) + '\n',
+    JSON.stringify(
+      {
+        name: 'agent-skills',
+        version: meta.version,
+        description: meta.description,
+        skills: './skills/',
+        interface: {
+          displayName: 'Agent Skills',
+          shortDescription: 'Lifecycle skills, persona agents, and governance hooks.',
+          category: 'Engineering',
+        },
+      },
+      null,
+      2,
+    ) + '\n',
   );
 
   // Skills — Codex skill frontmatter is `name` + `description` only (no `tools` line).
