@@ -86,8 +86,9 @@ const COVERED_HOOKS = ['pre-write-doc', 'verify-worktree-path'] as const;
 
 for (const hookName of COVERED_HOOKS) {
   describe(`hook ${hookName}`, () => {
-    const hookScript = join(HOOKS_DIR, `${hookName}.sh`);
-    const fixtureDir = join(HOOKS_DIR, `${hookName}.test`);
+    const hookDir = join(HOOKS_DIR, hookName);
+    const hookScript = join(hookDir, `${hookName}.sh`);
+    const fixtureDir = join(hookDir, `${hookName}.test`);
     const expectedPath = join(fixtureDir, 'expected.json');
     const expected = JSON.parse(readFileSync(expectedPath, 'utf8')) as ExpectedMap;
     const fixtures = readdirSync(fixtureDir).filter((f) => f.endsWith('.json') && f !== 'expected.json');

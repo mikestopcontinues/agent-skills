@@ -29,15 +29,16 @@ Other scripts:
 
 ## How a canonical source is shaped
 
-Each artifact is two or three files in the same canonical-sources directory,
-sharing a base name:
+Each artifact lives in its own subdirectory under the appropriate kind
+directory. Files inside the artifact dir share the artifact's base name:
 
-| Kind | Files |
-|------|-------|
-| Skill | `<name>.ts` (defineSkill call) + `<name>.md` (body) + optional `<name>.extras/` (per-skill shipped files like focus briefs) |
-| Agent | `<name>.ts` (defineAgent call) + `<name>.md` (system prompt) |
-| Hook | `<name>.ts` (defineHook call) + `<name>.sh` (bash handler) + optional `<name>.test/` (JSON fixtures the harness runs against the script) |
-| Script | A single executable file under `generator/canonical-sources/scripts/` |
+| Kind | Subdir layout |
+|------|---------------|
+| Skill | `skills/<name>/{<name>.ts, <name>.md, <name>.eval.md?, <name>.extras/?}` — the `defineSkill` call, the SKILL.md body, an optional eval brief, and an optional `<name>.extras/` dir for per-skill shipped files (focus briefs, chapter templates) |
+| Agent | `agents/<name>/{<name>.ts, <name>.md, <name>.eval.md?}` — the `defineAgent` call, the persona's system prompt, an optional eval brief |
+| Hook | `hooks/<name>/{<name>.ts, <name>.sh, <name>.eval.md?, <name>.test/?}` — the `defineHook` call, the bash handler, an optional eval brief, and an optional `<name>.test/` dir of JSON fixtures the runner pipes to the script |
+| Project context | `project-context/{project-context.ts, project-context.content.md, project-context.eval.md?}` — the `defineProjectContext` call and the content the toolkit ships to consumer `docs/` |
+| Script | `generator/scripts/<name>/<file>` — the executable file (e.g. `generator/scripts/yolo/yolo`). `.eval.md` sidecars in the same dir are dev-only and not shipped |
 
 The `define*` factories validate against Valibot schemas at module load —
 malformed sources fail fast with a typed error pointing at the bad field.
@@ -46,10 +47,11 @@ TypeScript catches the same shape errors at compile time via `alignSchema`.
 ## Add a skill (end-to-end)
 
 ```bash
-# 1. Create the three files
-cat > generator/canonical-sources/skills/my-skill.ts <<'EOF'
-import { defineSkill } from '../../factories/defineSkill.ts';
-import { loadText } from '../../factories/loadText.ts';
+# 1. Create the artifact directory + def + body files
+mkdir -p generator/canonical-sources/skills/my-skill
+cat > generator/canonical-sources/skills/my-skill/my-skill.ts <<'EOF'
+import { defineSkill } from '../../../factories/defineSkill.ts';
+import { loadText } from '../../../factories/loadText.ts';
 
 export const skill = defineSkill({
   name: 'my-skill',
@@ -58,22 +60,22 @@ export const skill = defineSkill({
 });
 EOF
 
-cat > generator/canonical-sources/skills/my-skill.md <<'EOF'
+cat > generator/canonical-sources/skills/my-skill/my-skill.md <<'EOF'
 The full SKILL.md body — instructions for the agent invoking this skill.
 EOF
 
 # 2. (Optional) ship extras alongside the skill
-mkdir -p generator/canonical-sources/skills/my-skill.extras/focuses
-cat > generator/canonical-sources/skills/my-skill.extras/focuses/accuracy.md <<'EOF'
+mkdir -p generator/canonical-sources/skills/my-skill/my-skill.extras/focuses
+cat > generator/canonical-sources/skills/my-skill/my-skill.extras/focuses/accuracy.md <<'EOF'
 # Accuracy focus brief
 EOF
 
-# 3. Regenerate bundles + verify everything is consistent
-pnpm run build
-pnpm run check
+# 3. Bump the version (the policy below explains why) + regenerate bundles
+pnpm run release patch       # bumps + builds + stages package.json + bundles
 
-# 4. Commit canonical sources AND the regenerated bundles together
-git add generator/canonical-sources/skills/my-skill.* claude/skills/my-skill codex/skills/my-skill opencode/skills/my-skill
+# 4. Verify check is green, then commit the canonical sources alongside the bump
+pnpm run check
+git add generator/canonical-sources/skills/my-skill/
 git commit -m "feat(skills): add my-skill — <one-liner why>"
 ```
 
@@ -84,9 +86,9 @@ update.
 ## Add an agent
 
 ```ts
-// generator/canonical-sources/agents/my-persona.ts
-import { defineAgent } from '../../factories/defineAgent.ts';
-import { loadText } from '../../factories/loadText.ts';
+// generator/canonical-sources/agents/my-persona/my-persona.ts
+import { defineAgent } from '../../../factories/defineAgent.ts';
+import { loadText } from '../../../factories/loadText.ts';
 
 export const agent = defineAgent({
   name: 'my-persona',
@@ -107,9 +109,9 @@ listed.
 ## Add a hook
 
 ```ts
-// generator/canonical-sources/hooks/my-hook.ts
-import { defineHook } from '../../factories/defineHook.ts';
-import { loadText } from '../../factories/loadText.ts';
+// generator/canonical-sources/hooks/my-hook/my-hook.ts
+import { defineHook } from '../../../factories/defineHook.ts';
+import { loadText } from '../../../factories/loadText.ts';
 
 export const hook = defineHook({
   name: 'my-hook',
@@ -132,7 +134,7 @@ files under `<name>.test/` plus a sibling `expected.json` declaring the
 outcome per fixture:
 
 ```
-generator/canonical-sources/hooks/my-hook.test/
+generator/canonical-sources/hooks/my-hook/my-hook.test/
   allow-normal-case.json
   deny-edge-case.json
   passthrough-no-match.json

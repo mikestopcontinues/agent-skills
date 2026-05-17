@@ -11,10 +11,13 @@ depend only on the emitted bundles.
 
 ## Canonical-sources discipline
 
-- **One file per artifact** under `generator/canonical-sources/{skills,agents,hooks}/`.
-  Each exports a single `define*(...)` call as a named `export` the generator
-  discovers by glob. The filesystem is the registry — adding an artifact means
-  adding a file; there is no import list to update.
+- **One directory per artifact** under `generator/canonical-sources/{skills,agents,hooks,project-context}/`.
+  Each artifact dir holds a `<name>.ts` (the `define*(...)` call), one or more
+  sidecar files (`<name>.md` body / `<name>.sh` handler / etc.), an optional
+  `<name>.eval.md` brief, and any extras (`<name>.extras/` for skill ships;
+  `<name>.test/` for hook fixtures). The generator discovers def files via
+  `<kind>/*/<name>.ts` glob. The filesystem is the registry — adding an
+  artifact means adding a directory; there is no import list to update.
 - **The `define*` factories validate at module load.** TypeScript catches shape
   errors at compile time (`alignSchema` keeps each type and its Valibot schema
   in sync); the schema catches anything dynamic when the module loads. A

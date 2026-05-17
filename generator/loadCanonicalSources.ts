@@ -10,7 +10,7 @@ const repoRoot = resolve(import.meta.dirname, '..');
 const canonRoot = resolve(repoRoot, 'generator/canonical-sources');
 
 /** Extra files a skill ships alongside its SKILL.md — focus briefs, chapter
- *  templates, etc. Discovered as everything under `<name>.extras/`. */
+ *  templates, etc. Discovered as everything under `<name>/<name>.extras/`. */
 export interface SkillExtras {
   /** Relative path under the skill's emit dir → absolute source path. */
   files: Map<string, string>;
@@ -61,14 +61,19 @@ async function importDefault<T>(file: string, exportName: string, ctor: new (...
  * skill / agent / hook `name` does not match its filename.
  */
 export async function loadCanonicalSources(): Promise<CanonicalSources> {
-  const skillFiles = (await glob('skills/*.ts', { cwd: canonRoot, absolute: true })).sort();
+  // Each artifact lives in its own subdir under the kind directory: e.g.
+  // `canonical-sources/skills/create-spike/{create-spike.ts, create-spike.md,
+  // create-spike.extras/, create-spike.eval.md}`. The def file is the .ts
+  // matching the parent dir name.
+  const skillFiles = (await glob('skills/*/*.ts', { cwd: canonRoot, absolute: true })).sort();
   const skills: LoadedSkill[] = [];
   for (const file of skillFiles) {
     const base = file.replace(/.*\//, '').replace(/\.ts$/, '');
     const skill = await importDefault(file, 'skill', Skill, 'Skill');
     if (skill.def.name !== base) throw new Error(`${file}: skill name '${skill.def.name}' != filename`);
-    const bodyPath = resolve(canonRoot, 'skills', `${base}.md`);
-    const extrasRoot = resolve(canonRoot, 'skills', `${base}.extras`);
+    const skillDir = resolve(canonRoot, 'skills', base);
+    const bodyPath = resolve(skillDir, `${base}.md`);
+    const extrasRoot = resolve(skillDir, `${base}.extras`);
     // `.eval.md` sidecars under `<name>.extras/` are dev-only — never shipped.
     const extraFiles = await glob('**/*', { cwd: extrasRoot, absolute: true, nodir: true, ignore: ['**/*.eval.md'] });
     const files = new Map<string, string>();
@@ -76,33 +81,40 @@ export async function loadCanonicalSources(): Promise<CanonicalSources> {
     skills.push({ skill, bodyPath, extras: { files } });
   }
 
-  const agentFiles = (await glob('agents/*.ts', { cwd: canonRoot, absolute: true })).sort();
+  const agentFiles = (await glob('agents/*/*.ts', { cwd: canonRoot, absolute: true })).sort();
   const agents: LoadedAgent[] = [];
   for (const file of agentFiles) {
     const base = file.replace(/.*\//, '').replace(/\.ts$/, '');
     const agent = await importDefault(file, 'agent', Agent, 'Agent');
     if (agent.def.name !== base) throw new Error(`${file}: agent name '${agent.def.name}' != filename`);
-    agents.push({ agent, promptPath: resolve(canonRoot, 'agents', `${base}.md`) });
+    agents.push({ agent, promptPath: resolve(canonRoot, 'agents', base, `${base}.md`) });
   }
 
-  const hookFiles = (await glob('hooks/*.ts', { cwd: canonRoot, absolute: true })).sort();
+  const hookFiles = (await glob('hooks/*/*.ts', { cwd: canonRoot, absolute: true })).sort();
   const hooks: LoadedHook[] = [];
   for (const file of hookFiles) {
     const base = file.replace(/.*\//, '').replace(/\.ts$/, '');
     const hook = await importDefault(file, 'hook', Hook, 'Hook');
     if (hook.def.name !== base) throw new Error(`${file}: hook name '${hook.def.name}' != filename`);
     if (hook.def.handler.kind !== 'bash') throw new Error(`${file}: only bash handlers are supported in v0.1`);
-    hooks.push({ hook, handlerPath: resolve(canonRoot, 'hooks', `${base}.sh`) });
+    hooks.push({ hook, handlerPath: resolve(canonRoot, 'hooks', base, `${base}.sh`) });
   }
 
-  const projectContextFiles = await glob('project-context.ts', { cwd: canonRoot, absolute: true });
+  const projectContextFiles = await glob('project-context/project-context.ts', { cwd: canonRoot, absolute: true });
   let projectContext: ProjectContext | undefined;
   if (projectContextFiles[0]) {
     projectContext = await importDefault(projectContextFiles[0], 'projectContext', ProjectContext, 'ProjectContext');
   }
 
-  // `.eval.md` sidecars in generator/scripts/ are dev-only — never shipped.
-  const scriptFiles = await glob('*', { cwd: resolve(repoRoot, 'generator/scripts'), absolute: true, nodir: true, ignore: ['*.eval.md'] });
+  // Each shipped script lives in `generator/scripts/<name>/<file>` — the dir
+  // groups the script with its `.eval.md` sidecar (dev-only, never shipped).
+  // We ship every file in the subdir except `.eval.md` ones.
+  const scriptFiles = await glob('*/*', {
+    cwd: resolve(repoRoot, 'generator/scripts'),
+    absolute: true,
+    nodir: true,
+    ignore: ['**/*.eval.md'],
+  });
   const scripts = new Map<string, string>();
   for (const abs of scriptFiles) scripts.set(abs.replace(/.*\//, ''), abs);
 
